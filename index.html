@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mini Truth or Dare Test</title>
+<style>
+  body { font-family: sans-serif; text-align: center; padding: 2rem; background: #222; color: #eee; }
+  input, button { padding: 10px; font-size: 1rem; margin: 0.5rem; border-radius: 6px; border: none; }
+  button { cursor: pointer; }
+  #challenge { margin-top: 2rem; font-size: 1.2rem; font-weight: bold; min-height: 2em; }
+  #players { margin-top: 1rem; }
+</style>
+</head>
+<body>
+
+<h1>Mini Truth or Dare</h1>
+
+<input id="playerName" placeholder="Enter player name" />
+<button id="addPlayerBtn">Add Player</button>
+
+<div id="players">No players yet</div>
+
+<button id="truthBtn" disabled>Truth</button>
+<button id="dareBtn" disabled>Dare</button>
+
+<div id="challenge"></div>
+
+<script>
+  const players = [];
+  const truths = ["What's your favorite color?", "Have you ever told a lie?", "What scares you most?"];
+  const dares = ["Do 5 jumping jacks", "Sing a song loudly", "Dance for 10 seconds"];
+
+  const playerNameInput = document.getElementById('playerName');
+  const addPlayerBtn = document.getElementById('addPlayerBtn');
+  const playersDiv = document.getElementById('players');
+  const truthBtn = document.getElementById('truthBtn');
+  const dareBtn = document.getElementById('dareBtn');
+  const challengeDiv = document.getElementById('challenge');
+
+  addPlayerBtn.onclick = () => {
+    const name = playerNameInput.value.trim();
+    if(name && !players.includes(name)){
+      players.push(name);
+      playerNameInput.value = '';
+      updatePlayers();
+      enableButtons();
+      challengeDiv.textContent = '';
+    }
+  };
+
+  function updatePlayers(){
+    if(players.length === 0){
+      playersDiv.textContent = 'No players yet';
+      disableButtons();
+    } else {
+      playersDiv.textContent = 'Players: ' + players.join(', ');
+    }
+  }
+
+  function enableButtons(){
+    truthBtn.disabled = false;
+    dareBtn.disabled = false;
+  }
+  function disableButtons(){
+    truthBtn.disabled = true;
+    dareBtn.disabled = true;
+  }
+
+  function getRandomItem(arr){
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function nextPlayer(){
+    // rotate players array for fairness
+    players.push(players.shift());
+    updatePlayers();
+  }
+
+  truthBtn.onclick = () => {
+    const player = players[0];
+    const truth = getRandomItem(truths);
+    challengeDiv.textContent = `${player}, Truth: ${truth}`;
+    nextPlayer();
+  };
+
+  dareBtn.onclick = () => {
+    const player = players[0];
+    const dare = getRandomItem(dares);
+    challengeDiv.textContent = `${player}, Dare: ${dare}`;
+    nextPlayer();
+  };
+
+  updatePlayers();
+</script>
+
+</body>
+</html>
