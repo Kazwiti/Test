@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Truth or Dare - Spicy Edition</title>
+<title>Truth or Dare - Extremely Naughty Edition</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -47,11 +47,14 @@
   label {
     font-weight: bold;
   }
+  #mode-select {
+    margin-top: 15px;
+  }
 </style>
 </head>
 <body>
 
-<h1>Truth or Dare - Spicy Edition</h1>
+<h1>Truth or Dare - Extremely Naughty Edition</h1>
 
 <div>
   <input type="text" id="player-name" placeholder="Enter player name" aria-label="Player name" />
@@ -64,6 +67,14 @@
 </div>
 
 <div id="player-list" aria-live="polite" aria-atomic="true">Players: None</div>
+
+<div id="mode-select">
+  <label for="mode">Choose game mode:</label>
+  <select id="mode" aria-label="Game mode">
+    <option value="spicy" selected>Extremely Naughty</option>
+    <option value="fun">Fun (Long Distance Couples)</option>
+  </select>
+</div>
 
 <div>
   <button id="truthBtn" disabled>Truth</button>
@@ -85,23 +96,86 @@
   const truthBtn = document.getElementById("truthBtn");
   const dareBtn = document.getElementById("dareBtn");
   const challengeDiv = document.getElementById("challenge");
+  const modeSelect = document.getElementById("mode");
 
   let currentPlayerIndex = 0;
+  let mode = modeSelect.value;
 
-  // Fun truths and dares (no gender separation for simplicity)
+  modeSelect.addEventListener("change", () => {
+    mode = modeSelect.value;
+    challengeDiv.innerHTML = "<p>Add players to start the game!</p>";
+  });
+
+  // Fun truths and dares for long distance couples
   const funTruths = [
-    "What's your favorite childhood memory?",
-    "If you could be any animal, what would you be?",
-    "What's the funniest thing you've ever done?"
-  ];
-  const funDares = [
-    "Do your best dance move for 10 seconds.",
-    "Talk in a British accent for the next round.",
-    "Make a funny face until your next turn."
+    "What's your favorite memory of us together?",
+    "What's the first thing you want to do when we meet again?",
+    "Describe a secret fantasy you want to try when we're next together.",
+    "Have you ever thought about me during the day? What exactly?",
+    "What do you miss most about me right now?",
+    "If we could have a virtual date, what would you want us to do?",
+    "What’s the sexiest text you’ve ever sent me?",
+    "Have you ever replayed a romantic moment we've shared in your mind?",
+    "What’s your favorite way I show affection over messages or calls?",
+    "Describe how you imagine my touch when we’re apart.",
+    "What’s a new thing you want us to try when we reunite?",
+    "What’s the naughtiest thought you’ve had about me today?",
+    "Have you ever wanted to surprise me with something sexy remotely?",
+    "What’s your favorite way to flirt with me from a distance?",
+    "What’s the sexiest dream you’ve had about us recently?",
+    "How do you like to tease me when we’re not physically together?",
+    "What’s your favorite time of day to think about me?",
+    "Have you ever planned a romantic getaway for us in your head?",
+    "What’s a song that makes you think about me and why?",
+    "What’s the most romantic thing you want to do when we’re reunited?",
+    "Describe your favorite physical feature of mine and why.",
+    "Have you ever thought about me when you shouldn’t have?",
+    "What’s something flirty you want to say to me right now?",
+    "What’s your favorite virtual kiss or hug memory?",
+    "If you could send me one thing remotely right now, what would it be?",
+    "What’s your favorite way I make you feel loved despite the distance?",
+    "Have you ever blushed because of something I said over text?",
+    "What’s your favorite way to keep the spark alive remotely?",
+    "What’s the most romantic text message you’d want me to send?",
+    "What’s a playful secret you want to share with me?",
   ];
 
-  // Spicy truths (no gender separation here, but can be split similarly if needed)
+  const funDares = [
+    "Send me your sexiest smile in a selfie.",
+    "Record a 10-second video saying something flirty.",
+    "Write a short naughty poem and send it to me.",
+    "Send a voice note whispering my name.",
+    "Send me a picture of your favorite outfit to seduce me.",
+    "Describe your favorite fantasy with me over a voice note.",
+    "Send a screenshot of your favorite conversation with me.",
+    "Draw a naughty doodle and send me a photo of it.",
+    "Send a video of you blowing a kiss.",
+    "Send a selfie making your sexiest pout.",
+    "Describe how you want to kiss me next time we meet.",
+    "Send a 15-second video of you dancing seductively.",
+    "Write me a flirty message using only emojis.",
+    "Send a picture of you pretending to whisper a secret.",
+    "Send a voice note telling me what you want to do when we meet.",
+    "Describe your favorite way to touch me over text.",
+    "Send a photo of your hands in a sexy pose.",
+    "Send a video of you tracing your lips with your finger.",
+    "Write a naughty story starring us and send it.",
+    "Send me a photo of your bedroom setup for when we reunite.",
+    "Send a selfie with tousled hair and a seductive look.",
+    "Record a short video saying a seductive sentence.",
+    "Send a photo of your favorite lingerie or boxers.",
+    "Send a voice note telling me your wildest fantasy.",
+    "Send me a virtual wink emoji 10 times in a row.",
+    "Send a 10-second video pretending to kiss me.",
+    "Write me a naughty limerick and send it.",
+    "Send a photo of your favorite body part and explain why.",
+    "Send a voice note of your deepest sigh.",
+    "Send a photo of your lips with a flirty smile.",
+  ];
+
+  // Existing spicy truths (your original 10) + appended 50 new extremely naughty truths
   const spicyTruths = [
+    // Your original 10 truths:
     "What’s the dirtiest thing you’ve ever fantasized about us doing together?",
     "Have you ever had a secret sexual desire you’re too shy to say out loud?",
     "What’s the kinkiest place you’d want to have sex with me?",
@@ -111,7 +185,60 @@
     "Describe your wildest orgasm experience with me.",
     "Have you ever been turned on by a naughty dream about me?",
     "What’s the one thing you want me to do that you’ve never asked for?",
-    "What’s your secret fantasy involving roleplay or costumes?"
+    "What’s your secret fantasy involving roleplay or costumes?",
+    // Appended 50 extremely naughty truths:
+    "What’s the dirtiest thing you want me to do to you right now?",
+    "Have you ever had a public sexual encounter or fantasy? Describe it.",
+    "What’s the wildest place you want to have sex that we haven’t tried yet?",
+    "Have you ever been caught masturbating or having sex? What happened?",
+    "What’s the biggest taboo fantasy you secretly want to explore with me?",
+    "Have you ever used toys or props? Which ones and how?",
+    "What’s the sexiest dream you’ve had about me that you can remember?",
+    "Have you ever wanted to try BDSM? What’s your favorite part of that idea?",
+    "Describe your favorite way to be kissed that drives you wild.",
+    "What’s the naughtiest thing you’ve done while on a date with me?",
+    "Have you ever wanted to film our intimate moments? Why or why not?",
+    "What’s the one outfit or lingerie you want me to wear for you?",
+    "Have you ever fantasized about a threesome or group sex with me?",
+    "Describe in detail the last time you wanted me but had to wait.",
+    "What’s a secret sexual habit you have that I might not know about?",
+    "Have you ever had a fantasy involving a stranger? What was it?",
+    "What’s the sexiest thing you want me to whisper while we’re together?",
+    "Have you ever thought about exhibitionism or being watched?",
+    "What’s your wildest memory of oral sex with me or someone else?",
+    "Describe a time you felt extremely turned on by something unexpected.",
+    "Have you ever wanted to try role swapping or gender play?",
+    "What’s the one place on your body that, if touched right, drives you crazy?",
+    "Have you ever written or thought about a dirty story starring us?",
+    "What’s your favorite type of dirty talk during sex?",
+    "Have you ever wanted to try erotic massage or tantra with me?",
+    "Describe a fantasy that involves food, scents, or sensory play.",
+    "Have you ever been curious about kink fetishes? Which ones intrigue you?",
+    "What’s the most intense orgasm you’ve ever had and what caused it?",
+    "Have you ever wanted to try silent sex or using only gestures?",
+    "Describe how you want me to undress you, step by step.",
+    "What’s your most secret and daring fantasy that you’ve never shared before?",
+    "Have you ever had a sexual dream about someone we both know?",
+    "What’s the naughtiest thought you’ve had about me in the last 24 hours?",
+    "Have you ever been turned on by something taboo or forbidden?",
+    "What’s the longest you’ve gone without sex and how did it affect you?",
+    "Describe your favorite way to be teased until you can’t stand it anymore.",
+    "Have you ever wanted to try spanking or being spanked? Details?",
+    "What’s a secret place you want me to touch you that I haven’t found yet?",
+    "Have you ever been caught doing something naughty? What happened next?",
+    "What’s your favorite kind of foreplay and why does it drive you wild?",
+    "Have you ever wanted to try edging or orgasm control?",
+    "What’s the kinkiest thing you’ve ever done in public?",
+    "Describe your favorite way to give or receive oral sex.",
+    "Have you ever wanted to try sex toys together? Which ones?",
+    "What’s your favorite dirty talk phrase to hear or say?",
+    "Have you ever thought about having sex in a place where we might get caught?",
+    "What’s the most embarrassing thing that turned you on?",
+    "Have you ever fantasized about a forbidden or taboo roleplay?",
+    "Describe your wildest wet dream involving me.",
+    "What’s your favorite way to be touched to make you shiver?",
+    "Have you ever wanted to try sensory deprivation or blindfolds?",
+    "What’s a naughty secret you’ve never told anyone before?"
   ];
 
   // All spicy dares with gender labels
@@ -161,102 +288,4 @@
   // Split dares by gender (including 'both')
   const spicyDaresMale = allSpicyDares
     .filter(d => d.gender === "male" || d.gender === "both")
-    .map(d => d.text);
-
-  const spicyDaresFemale = allSpicyDares
-    .filter(d => d.gender === "female" || d.gender === "both")
-    .map(d => d.text);
-
-  // Current mode, default spicy
-  let mode = "spicy";
-
-  // Utility: update player list display
-  function updatePlayerList() {
-    if (players.length === 0) {
-      playerListDiv.textContent = "Players: None";
-      truthBtn.disabled = true;
-      dareBtn.disabled = true;
-    } else {
-      playerListDiv.textContent =
-        "Players: " +
-        players.map((p) => `${p.name} (${p.gender})`).join(", ");
-      truthBtn.disabled = false;
-      dareBtn.disabled = false;
-    }
-  }
-
-  // Add player handler
-  addPlayerBtn.onclick = () => {
-    const name = playerNameInput.value.trim();
-    const gender = playerGenderSelect.value;
-
-    if (!name) {
-      alert("Please enter a player name.");
-      return;
-    }
-
-    players.push({ name, gender });
-    playerNameInput.value = "";
-    updatePlayerList();
-  };
-
-  // Get current player (cycling through players)
-  function getCurrentPlayer() {
-    if (players.length === 0) return null;
-    const player = players[currentPlayerIndex];
-    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    return player;
-  }
-
-  // Pick random item from array
-  function pickRandom(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-  }
-
-  // Show challenge text in UI
-  function showChallenge(text, playerName) {
-    challengeDiv.innerHTML = `<p><strong>${playerName}</strong>, your challenge is:<br>${text}</p>`;
-  }
-
-  // Handle truth button
-  truthBtn.onclick = () => {
-    const player = getCurrentPlayer();
-    if (!player) return;
-
-    let challenge = "";
-    if (mode === "fun") {
-      challenge = pickRandom(funTruths);
-    } else {
-      challenge = pickRandom(spicyTruths);
-    }
-
-    showChallenge(challenge, player.name);
-  };
-
-  // Handle dare button
-  dareBtn.onclick = () => {
-    const player = getCurrentPlayer();
-    if (!player) return;
-
-    let daresList;
-    if (mode === "fun") {
-      daresList = funDares;
-    } else {
-      if (player.gender === "male") {
-        daresList = spicyDaresMale;
-      } else {
-        daresList = spicyDaresFemale;
-      }
-    }
-
-    const dare = pickRandom(daresList);
-    showChallenge(dare, player.name);
-  };
-
-  // Start with empty player list
-  updatePlayerList();
-
-</script>
-
-</body>
-</html>
+    .
