@@ -50,6 +50,27 @@
   #mode-select {
     margin-top: 15px;
   }
+  #scoreboard {
+    margin-top: 30px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+    background: #222;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: left;
+  }
+  #scoreboard h2 {
+    margin-top: 0;
+  }
+  #score-list {
+    list-style: none;
+    padding-left: 0;
+    font-size: 1.1rem;
+  }
+  #score-list li {
+    margin-bottom: 8px;
+  }
 </style>
 </head>
 <body>
@@ -85,8 +106,17 @@
   <p>Add players to start the game!</p>
 </div>
 
+<div id="scoreboard">
+  <h2>Scoreboard</h2>
+  <ul id="score-list">
+    <li>No players added yet.</li>
+  </ul>
+</div>
+
 <script>
   const players = [];
+  const scores = {};
+  let currentResult = null;
 
   const playerNameInput = document.getElementById("player-name");
   const playerGenderSelect = document.getElementById("player-gender");
@@ -112,7 +142,9 @@
       return;
     }
     players.push({ name, gender });
+    scores[name] = 0; // Initialize player's score
     updatePlayerList();
+    updateScoreboard();
     playerNameInput.value = "";
     playerNameInput.focus();
     updateButtonsState();
@@ -138,7 +170,21 @@
     updateButtonsState();
   }
 
-  // === Truth and Dare Data ===
+  function updateScoreboard() {
+    const scoreList = document.getElementById("score-list");
+    scoreList.innerHTML = "";
+    if (players.length === 0) {
+      scoreList.innerHTML = "<li>No players added yet.</li>";
+      return;
+    }
+    players.forEach(p => {
+      const li = document.createElement("li");
+      li.textContent = `${p.name}: ${scores[p.name] || 0} point${(scores[p.name] === 1 ? "" : "s")}`;
+      scoreList.appendChild(li);
+    });
+  }
+
+// === Truth and Dare Data ===
 
   const spicyTruths = [
     "What’s the dirtiest thing you’ve ever fantasized about us doing together?",
@@ -247,6 +293,7 @@
     { text: "Snap a photo of a mystery part of your body and have me guess.", gender: "both" },
     { text: "Make your silliest face, send a picture.", gender: "both" }
   ];
+
   // Fun truths and dares for a lighter option
   const funTruths = [
     "What’s your favorite memory with me?",
@@ -323,58 +370,149 @@
   // Get challenge based on mode and type
 
   function getChallenge(type) {
-  if (mode === "spicy") {
-    if (players.length === 0) return { player: null, text: "Add players first!" };
-    const player = pickRandom(players);
-    if (type === "truth") {
-      const text = pickRandom(spicyTruths);
-      return { player, text };
+    if (mode === "spicy") {
+      if (players.length === 0) return { player: null, text: "Add players first!" };
+      const player = pickRandom(players);
+      if (type === "truth") {
+        const text = pickRandom(spicyTruths);
+        return { player, text };
+      } else {
+        const filteredDares = spicyDares.filter(
+          (d) => d.gender === "both" || d.gender === player.gender
+        );
+        if (filteredDares.length === 0)
+          return { player, text: "No dares available for this gender." };
+        const text = filteredDares[Math.floor(Math.random() * filteredDares.length)].text;
+        return { player, text };
+      }
     } else {
-      const filteredDares = spicyDares.filter(
-        (d) => d.gender === "both" || d.gender === player.gender
-      );
-      if (filteredDares.length === 0)
-        return { player, text: "No dares available for this gender." };
-      const text = filteredDares[Math.floor(Math.random() * filteredDares.length)].text;
-      return { player, text };
-    }
-  } else {
-    if (players.length === 0) return { player: null, text: "Add players first!" };
-    const player = pickRandom(players);
-    if (type === "truth") {
-      const text = pickRandom(funTruths);
-      return { player, text };
-    } else {
-      const text = pickRandom(funDares);
-      return { player, text };
+      if (players.length === 0) return { player: null, text: "Add players first!" };
+      const player = pickRandom(players);
+      if (type === "truth") {
+        const text = pickRandom(funTruths);
+        return { player, text };
+      } else {
+        const text = pickRandom(funDares);
+        return { player, text };
+      }
     }
   }
-}
+
+// Variables for current challenge and scoreboard
+  let currentChallenge = null;
+
+  // Scoreboard object: { playerName: points }
+  const scoreboard = {};
+
+  // Update the scoreboard display
+  function updateScoreboard() {
+    const scoreboardDiv = document.getElementById("scoreboard");
+    if (!scoreboardDiv) return;
+    let html = "<h2>Scoreboard</h2>";
+    if (players.length === 0) {
+      html += "<p>No players yet.</p>";
+    } else {
+      html += "<ul style='list-style:none; padding:0;'>";
+      players.forEach(p => {
+        const points = scoreboard[p.name] || 0;
+        html += `<li><strong>${p.name}:</strong> ${points} point${points !== 1 ? "s" : ""}</li>`;
+      });
+      html += "</ul>";
+    }
+    scoreboardDiv.innerHTML = html;
+  }
+
+  // Call updateScoreboard initially
+  updateScoreboard();
+
+  // Show the current challenge and enable completion buttons
+  function showChallenge(challengeObj, type) {
+    if (!challengeObj.player) {
+      challengeDiv.innerHTML = `<p>${challengeObj.text}</p>`;
+      completionDiv.style.display = "none";
+      currentChallenge = null;
+      return;
+    }
+    challengeDiv.innerHTML = `<p><strong>${challengeObj.player.name}'s ${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${challengeObj.text}</p>`;
+    currentChallenge = {
+      playerName: challengeObj.player.name,
+      type: type
+    };
+    completionDiv.style.display = "block";
+  }
 
   // Event listeners for buttons
 
   truthBtn.addEventListener("click", () => {
-  const result = getChallenge("truth");
-  if (!result.player) {
-    challengeDiv.innerHTML = `<p>${result.text}</p>`;
-  } else {
-    challengeDiv.innerHTML = `<p><strong>${result.player.name}'s Truth:</strong> ${result.text}</p>`;
-  }
+    const result = getChallenge("truth");
+    showChallenge(result, "truth");
+  });
+
+  dareBtn.addEventListener("click", () => {
+    const result = getChallenge("dare");
+    showChallenge(result, "dare");
+  });
+
+  // Completion buttons
+  const completionDiv = document.createElement("div");
+  completionDiv.style.marginTop = "15px";
+  completionDiv.style.display = "none";
+  completionDiv.innerHTML = `
+    <button id="completedBtn" style="background-color: #4CAF50; color: white; margin-right: 10px;">Completed</button>
+    <button id="failedBtn" style="background-color: #f44336; color: white;">Failed</button>
+  `;
+  document.body.appendChild(completionDiv);
+
+  const completedBtn = completionDiv.querySelector("#completedBtn");
+  const failedBtn = completionDiv.querySelector("#failedBtn");
+
+  completedBtn.addEventListener("click", () => {
+    if (!currentChallenge) return;
+    const playerName = currentChallenge.playerName;
+    // Award 1 point for completion
+    scoreboard[playerName] = (scoreboard[playerName] || 0) + 1;
+    updateScoreboard();
+    // Clear current challenge
+    challengeDiv.innerHTML = "<p>Choose Truth or Dare and have fun!</p>";
+    completionDiv.style.display = "none";
+    currentChallenge = null;
+  });
+
+  failedBtn.addEventListener("click", () => {
+  if (!currentChallenge) return;
+  // No points awarded for failing
+  challengeDiv.innerHTML = "<p>Try again or pick a new challenge!</p>";
+  completionDiv.style.display = "none";
+  currentChallenge = null;
 });
 
-dareBtn.addEventListener("click", () => {
-  const result = getChallenge("dare");
-  if (!result.player) {
-    challengeDiv.innerHTML = `<p>${result.text}</p>`;
-  } else {
-    challengeDiv.innerHTML = `<p><strong>${result.player.name}'s Dare:</strong> ${result.text}</p>`;
+  // When players change, reset scoreboard and UI
+  function resetGame() {
+    players.forEach(p => {
+      scoreboard[p.name] = 0;
+    });
+    updateScoreboard();
+    challengeDiv.innerHTML = "<p>Choose Truth or Dare and have fun!</p>";
+    completionDiv.style.display = "none";
+    currentChallenge = null;
   }
-});
 
-  // Initialize button states on page load
-  updateButtonsState();
-
-</script>
-</body>
-</html>
-
+  // Modify addPlayerBtn to call resetGame so scoreboard updates when players change
+  addPlayerBtn.addEventListener("click", () => {
+    const name = playerNameInput.value.trim();
+    const gender = playerGenderSelect.value;
+    if (!name) {
+      alert("Please enter a player name.");
+      return;
+    }
+    if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      alert("Player name already added.");
+      return;
+    }
+    players.push({ name, gender });
+    updatePlayerList();
+    resetGame();
+    playerNameInput.value = "";
+    playerNameInput.focus();
+    updateButtonsState();
+  });
