@@ -35,7 +35,7 @@
     padding: 20px;
     background: #222;
     border-radius: 12px;
-    min-height: 80px;
+    min-height: 100px;
     max-width: 400px;
     margin-left: auto;
     margin-right: auto;
@@ -72,7 +72,7 @@
   <label for="mode">Choose game mode:</label>
   <select id="mode" aria-label="Game mode">
     <option value="spicy" selected>Extremely Naughty</option>
-    <option value="fun">Fun (Long Distance Couples)</option>
+    <option value="fun">Fun</option>
   </select>
 </div>
 
@@ -86,7 +86,6 @@
 </div>
 
 <script>
-  // Players array with {name, gender}
   const players = [];
 
   const playerNameInput = document.getElementById("player-name");
@@ -98,84 +97,50 @@
   const challengeDiv = document.getElementById("challenge");
   const modeSelect = document.getElementById("mode");
 
-  let currentPlayerIndex = 0;
   let mode = modeSelect.value;
 
   modeSelect.addEventListener("change", () => {
     mode = modeSelect.value;
-    challengeDiv.innerHTML = "<p>Add players to start the game!</p>";
+    resetChallenge();
   });
 
-  // Fun truths and dares for long distance couples
-  const funTruths = [
-    "What's your favorite memory of us together?",
-    "What's the first thing you want to do when we meet again?",
-    "Describe a secret fantasy you want to try when we're next together.",
-    "Have you ever thought about me during the day? What exactly?",
-    "What do you miss most about me right now?",
-    "If we could have a virtual date, what would you want us to do?",
-    "What’s the sexiest text you’ve ever sent me?",
-    "Have you ever replayed a romantic moment we've shared in your mind?",
-    "What’s your favorite way I show affection over messages or calls?",
-    "Describe how you imagine my touch when we’re apart.",
-    "What’s a new thing you want us to try when we reunite?",
-    "What’s the naughtiest thought you’ve had about me today?",
-    "Have you ever wanted to surprise me with something sexy remotely?",
-    "What’s your favorite way to flirt with me from a distance?",
-    "What’s the sexiest dream you’ve had about us recently?",
-    "How do you like to tease me when we’re not physically together?",
-    "What’s your favorite time of day to think about me?",
-    "Have you ever planned a romantic getaway for us in your head?",
-    "What’s a song that makes you think about me and why?",
-    "What’s the most romantic thing you want to do when we’re reunited?",
-    "Describe your favorite physical feature of mine and why.",
-    "Have you ever thought about me when you shouldn’t have?",
-    "What’s something flirty you want to say to me right now?",
-    "What’s your favorite virtual kiss or hug memory?",
-    "If you could send me one thing remotely right now, what would it be?",
-    "What’s your favorite way I make you feel loved despite the distance?",
-    "Have you ever blushed because of something I said over text?",
-    "What’s your favorite way to keep the spark alive remotely?",
-    "What’s the most romantic text message you’d want me to send?",
-    "What’s a playful secret you want to share with me?",
-  ];
+  addPlayerBtn.addEventListener("click", () => {
+    const name = playerNameInput.value.trim();
+    const gender = playerGenderSelect.value;
+    if (!name) {
+      alert("Please enter a player name.");
+      return;
+    }
+    players.push({ name, gender });
+    updatePlayerList();
+    playerNameInput.value = "";
+    playerNameInput.focus();
+    updateButtonsState();
+    challengeDiv.innerHTML = "<p>Choose Truth or Dare and have fun!</p>";
+  });
 
-  const funDares = [
-    "Send me your sexiest smile in a selfie.",
-    "Record a 10-second video saying something flirty.",
-    "Write a short naughty poem and send it to me.",
-    "Send a voice note whispering my name.",
-    "Send me a picture of your favorite outfit to seduce me.",
-    "Describe your favorite fantasy with me over a voice note.",
-    "Send a screenshot of your favorite conversation with me.",
-    "Draw a naughty doodle and send me a photo of it.",
-    "Send a video of you blowing a kiss.",
-    "Send a selfie making your sexiest pout.",
-    "Describe how you want to kiss me next time we meet.",
-    "Send a 15-second video of you dancing seductively.",
-    "Write me a flirty message using only emojis.",
-    "Send a picture of you pretending to whisper a secret.",
-    "Send a voice note telling me what you want to do when we meet.",
-    "Describe your favorite way to touch me over text.",
-    "Send a photo of your hands in a sexy pose.",
-    "Send a video of you tracing your lips with your finger.",
-    "Write a naughty story starring us and send it.",
-    "Send me a photo of your bedroom setup for when we reunite.",
-    "Send a selfie with tousled hair and a seductive look.",
-    "Record a short video saying a seductive sentence.",
-    "Send a photo of your favorite lingerie or boxers.",
-    "Send a voice note telling me your wildest fantasy.",
-    "Send me a virtual wink emoji 10 times in a row.",
-    "Send a 10-second video pretending to kiss me.",
-    "Write me a naughty limerick and send it.",
-    "Send a photo of your favorite body part and explain why.",
-    "Send a voice note of your deepest sigh.",
-    "Send a photo of your lips with a flirty smile.",
-  ];
+  function updatePlayerList() {
+    if (players.length === 0) {
+      playerListDiv.textContent = "Players: None";
+    } else {
+      playerListDiv.textContent = "Players: " + players.map(p => p.name + " (" + p.gender + ")").join(", ");
+    }
+  }
 
-  // Existing spicy truths (your original 10) + appended 50 new extremely naughty truths
+  function updateButtonsState() {
+    const hasPlayers = players.length > 0;
+    truthBtn.disabled = !hasPlayers;
+    dareBtn.disabled = !hasPlayers;
+  }
+
+  function resetChallenge() {
+    challengeDiv.innerHTML = "<p>Add players to start the game!</p>";
+    updateButtonsState();
+  }
+
+  // === Truth and Dare Data ===
+
   const spicyTruths = [
-    // Your original 10 truths:
     "What’s the dirtiest thing you’ve ever fantasized about us doing together?",
     "Have you ever had a secret sexual desire you’re too shy to say out loud?",
     "What’s the kinkiest place you’d want to have sex with me?",
@@ -186,7 +151,6 @@
     "Have you ever been turned on by a naughty dream about me?",
     "What’s the one thing you want me to do that you’ve never asked for?",
     "What’s your secret fantasy involving roleplay or costumes?",
-    // Appended 50 extremely naughty truths:
     "What’s the dirtiest thing you want me to do to you right now?",
     "Have you ever had a public sexual encounter or fantasy? Describe it.",
     "What’s the wildest place you want to have sex that we haven’t tried yet?",
@@ -241,8 +205,7 @@
     "What’s a naughty secret you’ve never told anyone before?"
   ];
 
-  // All spicy dares with gender labels
-  const allSpicyDares = [
+  const spicyDares = [
     { text: "Send me a teasing photo — just enough to make me want more.", gender: "both" },
     { text: "Whisper your dirtiest fantasy about me into the mic for 15 seconds.", gender: "both" },
     { text: "Act out the first time we had sex.", gender: "both" },
@@ -284,8 +247,122 @@
     { text: "Snap a photo of a mystery part of your body and have me guess.", gender: "both" },
     { text: "Make your silliest face, send a picture.", gender: "both" }
   ];
+  // Fun truths and dares for a lighter option
+  const funTruths = [
+    "What’s your favorite memory with me?",
+    "If you could travel anywhere with me, where would it be?",
+    "What’s your secret talent?",
+    "What’s a funny thing you did as a kid?",
+    "Who was your first crush?",
+    "What’s your go-to dance move?",
+    "What’s the weirdest food you’ve ever tried?",
+    "If you could be an animal, what would you be and why?",
+    "What’s the last thing you laughed at really hard?",
+    "What’s one thing you’ve never told anyone?",
+    "If you could have any superpower, what would it be?",
+    "What’s your guilty pleasure TV show or movie?",
+    "Have you ever had a crush on a teacher?",
+    "What’s your favorite way to relax?",
+    "If you could instantly master a skill, what would it be?",
+    "What’s your weirdest fear?",
+    "What’s the most embarrassing thing that ever happened to you?",
+    "What’s your favorite joke?",
+    "If you were stranded on an island, what 3 things would you bring?",
+    "What’s something you’ve done that you’re proud of?",
+    "What’s your dream job?",
+    "What’s your favorite childhood cartoon?",
+    "What’s a habit you wish you could break?",
+    "What’s the best compliment you’ve ever received?",
+    "What’s your favorite holiday and why?",
+    "If you could meet any celebrity, who would it be?",
+    "What’s your favorite song to dance to?",
+    "What’s one thing you want to learn this year?",
+    "What’s your favorite way to spend a weekend?",
+    "What’s your go-to comfort food?"
+  ];
 
-  // Split dares by gender (including 'both')
-  const spicyDaresMale = allSpicyDares
-    .filter(d => d.gender === "male" || d.gender === "both")
-    .
+  const funDares = [
+    "Do your best celebrity impression.",
+    "Sing the chorus of your favorite song.",
+    "Do 10 jumping jacks right now.",
+    "Talk in a funny accent for the next 2 rounds.",
+    "Show your funniest dance move.",
+    "Send a silly selfie right now.",
+    "Make up a poem about the person to your left.",
+    "Do your best animal sound impression.",
+    "Spin around 5 times and try to walk straight.",
+    "Pretend you’re a superhero for the next minute.",
+    "Make a funny face and hold it for 10 seconds.",
+    "Say the alphabet backwards as fast as you can.",
+    "Act like your favorite cartoon character.",
+    "Tell a joke and try to make everyone laugh.",
+    "Do your best runway walk across the room.",
+    "Make a hat out of something nearby and wear it.",
+    "Try to lick your elbow.",
+    "Make up a short story on the spot.",
+    "Balance on one leg for 15 seconds.",
+    "Show us your best silly dance.",
+    "Say ‘I love [player name]’ in a dramatic voice.",
+    "Pretend to be a news anchor for 1 minute.",
+    "Try to whistle a song.",
+    "Make a funny face and send it to the chat.",
+    "Imitate a famous movie scene.",
+    "Pretend to be a cat for 30 seconds.",
+    "Do your best robot dance.",
+    "Draw a quick doodle and show it to everyone.",
+    "Say a tongue twister 3 times fast.",
+    "Pretend you’re on a cooking show and describe a recipe."
+  ];
+
+  // Utility functions
+
+  function pickRandom(array) {
+    return array[Math.floor(Math.random() * array.length)];
+  }
+
+  // Get challenge based on mode and type
+
+  function getChallenge(type) {
+    if (mode === "spicy") {
+      if (type === "truth") {
+        return pickRandom(spicyTruths);
+      } else {
+        // Pick dare according to a random player's gender
+        if (players.length === 0) return "Add players first!";
+        const player = pickRandom(players);
+        // Filter dares matching player gender or 'both'
+        const filteredDares = spicyDares.filter(
+          (d) => d.gender === "both" || d.gender === player.gender
+        );
+        if (filteredDares.length === 0) return "No dares available for this gender.";
+        return filteredDares[Math.floor(Math.random() * filteredDares.length)].text;
+      }
+    } else {
+      // Fun mode
+      if (type === "truth") {
+        return pickRandom(funTruths);
+      } else {
+        return pickRandom(funDares);
+      }
+    }
+  }
+
+  // Event listeners for buttons
+
+  truthBtn.addEventListener("click", () => {
+    const challenge = getChallenge("truth");
+    challengeDiv.innerHTML = `<p><strong>Truth:</strong> ${challenge}</p>`;
+  });
+
+  dareBtn.addEventListener("click", () => {
+    const challenge = getChallenge("dare");
+    challengeDiv.innerHTML = `<p><strong>Dare:</strong> ${challenge}</p>`;
+  });
+
+  // Initialize button states on page load
+  updateButtonsState();
+
+</script>
+</body>
+</html>
+
