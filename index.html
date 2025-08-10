@@ -323,41 +323,53 @@
   // Get challenge based on mode and type
 
   function getChallenge(type) {
-    if (mode === "spicy") {
-      if (type === "truth") {
-        return pickRandom(spicyTruths);
-      } else {
-        // Pick dare according to a random player's gender
-        if (players.length === 0) return "Add players first!";
-        const player = pickRandom(players);
-        // Filter dares matching player gender or 'both'
-        const filteredDares = spicyDares.filter(
-          (d) => d.gender === "both" || d.gender === player.gender
-        );
-        if (filteredDares.length === 0) return "No dares available for this gender.";
-        return filteredDares[Math.floor(Math.random() * filteredDares.length)].text;
-      }
+  if (mode === "spicy") {
+    if (players.length === 0) return { player: null, text: "Add players first!" };
+    const player = pickRandom(players);
+    if (type === "truth") {
+      const text = pickRandom(spicyTruths);
+      return { player, text };
     } else {
-      // Fun mode
-      if (type === "truth") {
-        return pickRandom(funTruths);
-      } else {
-        return pickRandom(funDares);
-      }
+      const filteredDares = spicyDares.filter(
+        (d) => d.gender === "both" || d.gender === player.gender
+      );
+      if (filteredDares.length === 0)
+        return { player, text: "No dares available for this gender." };
+      const text = filteredDares[Math.floor(Math.random() * filteredDares.length)].text;
+      return { player, text };
+    }
+  } else {
+    if (players.length === 0) return { player: null, text: "Add players first!" };
+    const player = pickRandom(players);
+    if (type === "truth") {
+      const text = pickRandom(funTruths);
+      return { player, text };
+    } else {
+      const text = pickRandom(funDares);
+      return { player, text };
     }
   }
+}
 
   // Event listeners for buttons
 
   truthBtn.addEventListener("click", () => {
-    const challenge = getChallenge("truth");
-    challengeDiv.innerHTML = `<p><strong>Truth:</strong> ${challenge}</p>`;
-  });
+  const result = getChallenge("truth");
+  if (!result.player) {
+    challengeDiv.innerHTML = `<p>${result.text}</p>`;
+  } else {
+    challengeDiv.innerHTML = `<p><strong>${result.player.name}'s Truth:</strong> ${result.text}</p>`;
+  }
+});
 
-  dareBtn.addEventListener("click", () => {
-    const challenge = getChallenge("dare");
-    challengeDiv.innerHTML = `<p><strong>Dare:</strong> ${challenge}</p>`;
-  });
+dareBtn.addEventListener("click", () => {
+  const result = getChallenge("dare");
+  if (!result.player) {
+    challengeDiv.innerHTML = `<p>${result.text}</p>`;
+  } else {
+    challengeDiv.innerHTML = `<p><strong>${result.player.name}'s Dare:</strong> ${result.text}</p>`;
+  }
+});
 
   // Initialize button states on page load
   updateButtonsState();
