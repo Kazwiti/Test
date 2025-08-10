@@ -3,95 +3,156 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Mini Truth or Dare Test</title>
+<title>Truth or Dare</title>
 <style>
-  body { font-family: sans-serif; text-align: center; padding: 2rem; background: #222; color: #eee; }
-  input, button { padding: 10px; font-size: 1rem; margin: 0.5rem; border-radius: 6px; border: none; }
-  button { cursor: pointer; }
-  #challenge { margin-top: 2rem; font-size: 1.2rem; font-weight: bold; min-height: 2em; }
-  #players { margin-top: 1rem; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    text-align: center;
+    padding: 20px;
+  }
+  input, select, button {
+    padding: 10px 15px;
+    margin: 5px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  #player-list {
+    margin: 10px 0;
+    font-weight: bold;
+  }
+  #challenge {
+    margin-top: 30px;
+    padding: 20px;
+    background: #222;
+    border-radius: 12px;
+    min-height: 80px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #challenge p {
+    font-size: 1.2rem;
+    user-select: text;
+  }
 </style>
 </head>
 <body>
 
-<h1>Mini Truth or Dare</h1>
+<h1>Truth or Dare</h1>
 
-<input id="playerName" placeholder="Enter player name" />
-<button id="addPlayerBtn">Add Player</button>
+<label for="mode">Choose Mode:</label>
+<select id="mode">
+  <option value="fun">Fun</option>
+  <option value="spicy">Spicy</option>
+</select>
 
-<div id="players">No players yet</div>
+<div>
+  <input type="text" id="player-name" placeholder="Enter player name" />
+  <button id="addPlayerBtn">Add Player</button>
+</div>
 
-<button id="truthBtn" disabled>Truth</button>
-<button id="dareBtn" disabled>Dare</button>
+<div id="player-list">Players: None</div>
 
-<div id="challenge"></div>
+<div>
+  <button id="truthBtn" disabled>Truth</button>
+  <button id="dareBtn" disabled>Dare</button>
+</div>
+
+<div id="challenge">
+  <p>Add players and select a challenge to start!</p>
+</div>
 
 <script>
-  const players = [];
-  const truths = ["What's your favorite color?", "Have you ever told a lie?", "What scares you most?"];
-  const dares = ["Do 5 jumping jacks", "Sing a song loudly", "Dance for 10 seconds"];
+  const funTruths = [
+    "What's your favorite childhood memory?",
+    "If you could be any animal, what would you be?",
+    "What's the funniest thing you've ever done?"
+  ];
+  const funDares = [
+    "Do your best dance move for 10 seconds.",
+    "Talk in a British accent for the next round.",
+    "Make a funny face until your next turn."
+  ];
 
-  const playerNameInput = document.getElementById('playerName');
+  const spicyTruths = [
+    "What’s the dirtiest thing you’ve fantasized about us doing together?",
+    "Have you ever had a secret sexual desire you’re too shy to say out loud?",
+    "What’s the kinkiest place you’d want to have sex with me?"
+  ];
+
+  const spicyDares = [
+    "Send me a teasing photo — just enough to make me want more.",
+    "Whisper your dirtiest fantasy about me into the mic for 15 seconds.",
+    "Act out the first time we had sex."
+  ];
+
+  let players = [];
+
+  const playerNameInput = document.getElementById('player-name');
   const addPlayerBtn = document.getElementById('addPlayerBtn');
-  const playersDiv = document.getElementById('players');
+  const playerListDiv = document.getElementById('player-list');
   const truthBtn = document.getElementById('truthBtn');
   const dareBtn = document.getElementById('dareBtn');
   const challengeDiv = document.getElementById('challenge');
+  const modeSelect = document.getElementById('mode');
 
-  addPlayerBtn.onclick = () => {
+  function updatePlayerList() {
+    if (players.length === 0) {
+      playerListDiv.textContent = 'Players: None';
+      truthBtn.disabled = true;
+      dareBtn.disabled = true;
+    } else {
+      playerListDiv.textContent = 'Players: ' + players.join(', ');
+      truthBtn.disabled = false;
+      dareBtn.disabled = false;
+    }
+  }
+
+  addPlayerBtn.addEventListener('click', () => {
     const name = playerNameInput.value.trim();
-    if(name && !players.includes(name)){
+    if (name && !players.includes(name)) {
       players.push(name);
       playerNameInput.value = '';
-      updatePlayers();
-      enableButtons();
-      challengeDiv.textContent = '';
+      updatePlayerList();
     }
-  };
+  });
 
-  function updatePlayers(){
-    if(players.length === 0){
-      playersDiv.textContent = 'No players yet';
-      disableButtons();
-    } else {
-      playersDiv.textContent = 'Players: ' + players.join(', ');
-    }
-  }
-
-  function enableButtons(){
-    truthBtn.disabled = false;
-    dareBtn.disabled = false;
-  }
-  function disableButtons(){
-    truthBtn.disabled = true;
-    dareBtn.disabled = true;
-  }
-
-  function getRandomItem(arr){
+  function getRandomItem(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  function nextPlayer(){
-    // rotate players array for fairness
-    players.push(players.shift());
-    updatePlayers();
+  function getCurrentChallenges(type) {
+    if (modeSelect.value === 'fun') {
+      return type === 'truth' ? funTruths : funDares;
+    } else {
+      return type === 'truth' ? spicyTruths : spicyDares;
+    }
   }
 
-  truthBtn.onclick = () => {
-    const player = players[0];
-    const truth = getRandomItem(truths);
-    challengeDiv.textContent = `${player}, Truth: ${truth}`;
-    nextPlayer();
-  };
+  function showChallenge(type) {
+    if (players.length === 0) {
+      challengeDiv.innerHTML = '<p>Please add at least one player.</p>';
+      return;
+    }
+    const player = getRandomItem(players);
+    const challenge = getRandomItem(getCurrentChallenges(type));
+    challengeDiv.innerHTML = `<p><strong>${player}</strong>, your ${type} is:</p><p>${challenge}</p>`;
+  }
 
-  dareBtn.onclick = () => {
-    const player = players[0];
-    const dare = getRandomItem(dares);
-    challengeDiv.textContent = `${player}, Dare: ${dare}`;
-    nextPlayer();
-  };
+  truthBtn.addEventListener('click', () => showChallenge('truth'));
+  dareBtn.addEventListener('click', () => showChallenge('dare'));
 
-  updatePlayers();
+  updatePlayerList();
 </script>
 
 </body>
