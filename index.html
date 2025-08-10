@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Truth or Dare</title>
+<title>Truth or Dare - Spicy Edition</title>
 <style>
   body {
     font-family: Arial, sans-serif;
@@ -44,35 +44,51 @@
     font-size: 1.2rem;
     user-select: text;
   }
+  label {
+    font-weight: bold;
+  }
 </style>
 </head>
 <body>
 
-<h1>Truth or Dare</h1>
-
-<label for="mode">Choose Mode:</label>
-<select id="mode">
-  <option value="fun">Fun</option>
-  <option value="spicy" selected>Spicy</option>
-</select>
+<h1>Truth or Dare - Spicy Edition</h1>
 
 <div>
-  <input type="text" id="player-name" placeholder="Enter player name" />
+  <input type="text" id="player-name" placeholder="Enter player name" aria-label="Player name" />
+  <label for="player-gender">Gender:</label>
+  <select id="player-gender" aria-label="Player gender">
+    <option value="male" selected>Male</option>
+    <option value="female">Female</option>
+  </select>
   <button id="addPlayerBtn">Add Player</button>
 </div>
 
-<div id="player-list">Players: None</div>
+<div id="player-list" aria-live="polite" aria-atomic="true">Players: None</div>
 
 <div>
   <button id="truthBtn" disabled>Truth</button>
   <button id="dareBtn" disabled>Dare</button>
 </div>
 
-<div id="challenge">
-  <p>Add players and select a challenge to start!</p>
+<div id="challenge" role="region" aria-live="polite" aria-atomic="true">
+  <p>Add players to start the game!</p>
 </div>
 
 <script>
+  // Players array with {name, gender}
+  const players = [];
+
+  const playerNameInput = document.getElementById("player-name");
+  const playerGenderSelect = document.getElementById("player-gender");
+  const addPlayerBtn = document.getElementById("addPlayerBtn");
+  const playerListDiv = document.getElementById("player-list");
+  const truthBtn = document.getElementById("truthBtn");
+  const dareBtn = document.getElementById("dareBtn");
+  const challengeDiv = document.getElementById("challenge");
+
+  let currentPlayerIndex = 0;
+
+  // Fun truths and dares (no gender separation for simplicity)
   const funTruths = [
     "What's your favorite childhood memory?",
     "If you could be any animal, what would you be?",
@@ -84,6 +100,7 @@
     "Make a funny face until your next turn."
   ];
 
+  // Spicy truths (no gender separation here, but can be split similarly if needed)
   const spicyTruths = [
     "What’s the dirtiest thing you’ve ever fantasized about us doing together?",
     "Have you ever had a secret sexual desire you’re too shy to say out loud?",
@@ -94,119 +111,151 @@
     "Describe your wildest orgasm experience with me.",
     "Have you ever been turned on by a naughty dream about me?",
     "What’s the one thing you want me to do that you’ve never asked for?",
-    "What’s your secret fantasy involving roleplay or costumes?",
-    "Have you ever thought about filming us having sex?",
-    "What’s a sexy secret you’ve kept from me until now?",
-    "Describe the naughtiest thought you’ve had about me today.",
-    "What’s your favorite part of my body to pleasure and why?",
-    "Have you ever wanted to try something taboo with me?",
-    "What’s the longest you’ve gone without sex and how did it feel?",
-    "Describe a time you got caught doing something naughty.",
-    "What’s a forbidden fantasy you’d love to live out with me?",
-    "Have you ever been jealous of someone you imagined touching me?",
-    "What’s the sexiest thing you want me to whisper in your ear?"
+    "What’s your secret fantasy involving roleplay or costumes?"
   ];
 
-  const spicyDares = [
-    "Send me a teasing photo — just enough to make me want more.",
-    "Whisper your dirtiest fantasy about me into the mic for 15 seconds.",
-    "Act out the first time we had sex.",
-    "Moan softly into the mic like you’re thinking about me.",
-    "Send a video playing with your belly button with only underwear on.",
-    "Bite your lip and hold eye contact with the camera for 10 seconds.",
-    "Send a voice note saying my name in the sexiest way possible.",
-    "Describe in detail the last time you thought about me naked.",
-    "Make a 10-second video of you tracing your lips with your finger.",
-    "Describe how you want me to kiss you, step by step.",
-    "Send a flirty selfie with your hair tousled or messy.",
-    "Whisper a naughty secret about what you want to do to me.",
-    "Record yourself breathing heavily and send the clip.",
-    "Slowly say out loud something you’ve never told me but want to try.",
-    "Act out your favorite intimate move on camera.",
-    "Describe what you’re wearing right now in a way that makes me blush.",
-    "Send a photo of your hand tracing your neck or collarbone.",
-    "Pretend you’re making out with me for 20 seconds on video.",
-    "Say a seductive sentence and repeat it with increasing intensity.",
-    "Send a 10-second video blowing a kiss to the camera.",
-    "Take a video slowly unbuttoning your shirt but stop before it’s fully off.",
-    "Take a selfie wearing just your underwear or boxers.",
-    "Describe the first thing you’d do if you could touch me right now — make it explicit.",
-    "Send a picture of my favorite part on you. Spell out what you want to do to your partner using only emojis.",
-    "Send a picture of something I'd be touching if you were here.",
-    "Tell me your favorite position to imagine us in — describe it in detail.",
-    "Make a video pretending to kiss me passionately and whisper something naughty after.",
-    "Describe exactly how you’d touch me, including where and how hard/soft.",
-    "Send a photo of anything I ask.",
-    "Whisper your dirtiest fantasy into the mic — no holding back.",
-    "Show me the last X-rated clip you watched.",
-    "Make a video slowly taking off your underwear, you can stop whenever you want.",
-    "Describe your favorite spot on your body that you want me to kiss — in detail.",
-    "Send a photo in your favorite underwear.",
-    "Act out your favorite intimate move on video.",
-    "Fake an orgasm for 1 minute on video.",
-    "Send me a slow video of you tracing your abs and chest with your fingertips, making it clear you’re thinking of me.",
-    "Do whatever I ask for 2 minutes.",
-    "Tell me who in your contact list you would most want us to have a threesome with.",
-    "Snap a photo of a mystery part of your body and have me guess."
+  // All spicy dares with gender labels
+  const allSpicyDares = [
+    { text: "Send me a teasing photo — just enough to make me want more.", gender: "both" },
+    { text: "Whisper your dirtiest fantasy about me into the mic for 15 seconds.", gender: "both" },
+    { text: "Act out the first time we had sex.", gender: "both" },
+    { text: "Moan softly into the mic like you’re thinking about me.", gender: "female" },
+    { text: "Send a video playing with your belly button with only an underwear on.", gender: "female" },
+    { text: "Bite your lip and hold eye contact with the camera for 10 seconds.", gender: "female" },
+    { text: "Send a voice note saying my name in the sexiest way possible.", gender: "both" },
+    { text: "Describe in detail the last time you thought about me naked.", gender: "both" },
+    { text: "Make a 10-second video of you tracing your lips with your finger.", gender: "both" },
+    { text: "Describe how you want me to kiss you, step by step.", gender: "female" },
+    { text: "Send a flirty selfie with your hair tousled or messy.", gender: "female" },
+    { text: "Whisper a naughty secret about what you want to do to me.", gender: "both" },
+    { text: "Record yourself breathing heavily and send the clip.", gender: "both" },
+    { text: "Slowly say something we’ve never done but you want to try.", gender: "both" },
+    { text: "Act out your favorite intimate move on camera.", gender: "male" },
+    { text: "Describe what you’re wearing right now in a way that makes me blush.", gender: "female" },
+    { text: "Send a photo of your hand tracing your neck or collarbone.", gender: "both" },
+    { text: "Pretend you’re making out with me for 20 seconds on video.", gender: "male" },
+    { text: "Say a seductive sentence and repeat it with increasing intensity.", gender: "male" },
+    { text: "Send a 10-second video blowing a kiss to the camera.", gender: "male" },
+    { text: "Take a video slowly taking off your shirt but stop before it’s fully off.", gender: "both" },
+    { text: "Take a selfie wearing just your underwear or boxers.", gender: "both" },
+    { text: "Describe the first thing you’d do if you could touch me right now — make it explicit.", gender: "both" },
+    { text: "Send a picture of my favorite part on you.", gender: "both" },
+    { text: "Spell out what you want to do to your partner using only emojis.", gender: "both" },
+    { text: "Send a picture of something I'd be touching if you were here.", gender: "both" },
+    { text: "Tell me your favorite position to imagine us in — describe it in detail.", gender: "both" },
+    { text: "Make a video pretending to kiss me passionately and whisper something naughty after.", gender: "male" },
+    { text: "Describe exactly how you’d touch me, including where and how.", gender: "male" },
+    { text: "Whisper your dirtiest fantasy into the mic — no holding back.", gender: "both" },
+    { text: "Show me the last X-rated clip you watched.", gender: "both" },
+    { text: "Make a video slowly taking off your underwear, you can stop whenever you want.", gender: "both" },
+    { text: "Describe your favorite spot on your body that you want me to kiss — in detail.", gender: "female" },
+    { text: "Send a photo in your favorite underwear.", gender: "both" },
+    { text: "Fake an orgasm for 1 minute on video.", gender: "both" },
+    { text: "Send a slow video of you tracing your abs and chest with your fingertips, making it clear you’re thinking of me.", gender: "male" },
+    { text: "Do whatever I ask for 1 minute.", gender: "both" },
+    { text: "Tell me who in your contact list you would most want us to have a threesome with.", gender: "female" },
+    { text: "Snap a photo of a mystery part of your body and have me guess.", gender: "both" },
+    { text: "Make your silliest face, send a picture.", gender: "both" }
   ];
 
-  let players = [];
+  // Split dares by gender (including 'both')
+  const spicyDaresMale = allSpicyDares
+    .filter(d => d.gender === "male" || d.gender === "both")
+    .map(d => d.text);
 
-  const playerNameInput = document.getElementById('player-name');
-  const addPlayerBtn = document.getElementById('addPlayerBtn');
-  const playerListDiv = document.getElementById('player-list');
-  const truthBtn = document.getElementById('truthBtn');
-  const dareBtn = document.getElementById('dareBtn');
-  const challengeDiv = document.getElementById('challenge');
-  const modeSelect = document.getElementById('mode');
+  const spicyDaresFemale = allSpicyDares
+    .filter(d => d.gender === "female" || d.gender === "both")
+    .map(d => d.text);
 
+  // Current mode, default spicy
+  let mode = "spicy";
+
+  // Utility: update player list display
   function updatePlayerList() {
     if (players.length === 0) {
-      playerListDiv.textContent = 'Players: None';
+      playerListDiv.textContent = "Players: None";
       truthBtn.disabled = true;
       dareBtn.disabled = true;
     } else {
-      playerListDiv.textContent = 'Players: ' + players.join(', ');
+      playerListDiv.textContent =
+        "Players: " +
+        players.map((p) => `${p.name} (${p.gender})`).join(", ");
       truthBtn.disabled = false;
       dareBtn.disabled = false;
     }
   }
 
-  addPlayerBtn.addEventListener('click', () => {
+  // Add player handler
+  addPlayerBtn.onclick = () => {
     const name = playerNameInput.value.trim();
-    if (name && !players.includes(name)) {
-      players.push(name);
-      playerNameInput.value = '';
-      updatePlayerList();
-    }
-  });
+    const gender = playerGenderSelect.value;
 
-  function getRandomItem(arr) {
+    if (!name) {
+      alert("Please enter a player name.");
+      return;
+    }
+
+    players.push({ name, gender });
+    playerNameInput.value = "";
+    updatePlayerList();
+  };
+
+  // Get current player (cycling through players)
+  function getCurrentPlayer() {
+    if (players.length === 0) return null;
+    const player = players[currentPlayerIndex];
+    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    return player;
+  }
+
+  // Pick random item from array
+  function pickRandom(arr) {
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  function getCurrentChallenges(type) {
-    if (modeSelect.value === 'fun') {
-      return type === 'truth' ? funTruths : funDares;
+  // Show challenge text in UI
+  function showChallenge(text, playerName) {
+    challengeDiv.innerHTML = `<p><strong>${playerName}</strong>, your challenge is:<br>${text}</p>`;
+  }
+
+  // Handle truth button
+  truthBtn.onclick = () => {
+    const player = getCurrentPlayer();
+    if (!player) return;
+
+    let challenge = "";
+    if (mode === "fun") {
+      challenge = pickRandom(funTruths);
     } else {
-      return type === 'truth' ? spicyTruths : spicyDares;
+      challenge = pickRandom(spicyTruths);
     }
-  }
 
-  function showChallenge(type) {
-    if (players.length === 0) {
-      challengeDiv.innerHTML = '<p>Please add at least one player.</p>';
-      return;
+    showChallenge(challenge, player.name);
+  };
+
+  // Handle dare button
+  dareBtn.onclick = () => {
+    const player = getCurrentPlayer();
+    if (!player) return;
+
+    let daresList;
+    if (mode === "fun") {
+      daresList = funDares;
+    } else {
+      if (player.gender === "male") {
+        daresList = spicyDaresMale;
+      } else {
+        daresList = spicyDaresFemale;
+      }
     }
-    const player = getRandomItem(players);
-    const challenge = getRandomItem(getCurrentChallenges(type));
-    challengeDiv.innerHTML = `<p><strong>${player}</strong>, your ${type} is:</p><p>${challenge}</p>`;
-  }
 
-  truthBtn.addEventListener('click', () => showChallenge('truth'));
-  dareBtn.addEventListener('click', () => showChallenge('dare'));
+    const dare = pickRandom(daresList);
+    showChallenge(dare, player.name);
+  };
 
+  // Start with empty player list
   updatePlayerList();
+
 </script>
 
 </body>
