@@ -172,147 +172,193 @@
   }
 </script>
 
-<script>  
-  // --- Firebase config: REPLACE placeholders with your real Firebase config ---  
-  const firebaseConfig = {  
-    apiKey: "YOUR_API_KEY",  
-    authDomain: "game-project.firebaseapp.com",  
-    databaseURL: "https://game-project-default-rtdb.firebaseio.com",  
-    projectId: "game-project",  
-    storageBucket: "game-project.appspot.com",  
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",  
-    appId: "YOUR_APP_ID"  
-  };  
-  
-  // Initialize Firebase  
-  firebase.initializeApp(firebaseConfig);  
-  const rdb = firebase.database();  
-  
-  // Multiplayer session variables  
-  let gameId = null; // the room code / session id  
-  let isSyncing = false; // true when connected to a game  
-  const localClientId = Math.random().toString(36).slice(2,10); // small id for this browser instance  
-  
-  const roomInput = document.getElementById('roomInput');  
-  const createRoomBtn = document.getElementById('createRoomBtn');  
-  const joinRoomBtn = document.getElementById('joinRoomBtn');  
-  const roomInfo = document.getElementById('roomInfo');  
-  
-  createRoomBtn.addEventListener('click', () => {  
-    // generate a simple 6-char room code  
-    const code = Math.random().toString(36).slice(2,8).toUpperCase();  
-    // set URL param and start session  
-    const newUrl = new URL(window.location.href);  
-    newUrl.searchParams.set('game', code);  
-    window.history.replaceState({}, '', newUrl);  
-    roomInput.value = code;  
-    startSession(code);  
-  });  
-  
-  joinRoomBtn.addEventListener('click', () => {  
-    const code = roomInput.value.trim().toUpperCase();  
-    if (!code) {  
-      alert('Enter a room code to join or create one.');  
-      return;  
-    }  
-    // set URL param and start session  
-    const newUrl = new URL(window.location.href);  
-    newUrl.searchParams.set('game', code);  
-    window.history.replaceState({}, '', newUrl);  
-    startSession(code);  
-  });  
-  
-  // Auto-join if ?game=CODE present  
-  const urlParams = new URLSearchParams(window.location.search);  
-  if (urlParams.has('game')) {  
-    const code = urlParams.get('game').toUpperCase();  
-    roomInput.value = code;  
-    startSession(code);  
-  }  
-  
-  // helper to set room info text  
-  function setRoomInfo(text) {  
-    roomInfo.textContent = text;  
-  }  
-  
-  // --- Added multiplayer realtime sync ---  
-  
-  // Start or join a game session (room) and sync game state via Realtime Database  
-  function startSession(code) {  
-    if (isSyncing) {  
-      // If already syncing with another session, detach previous listeners  
-      rdb.ref(`games/${gameId}/players`).off();  
-      rdb.ref(`games/${gameId}/currentChallenge`).off();  
-      rdb.ref(`games/${gameId}/mode`).off();  
-    }  
-  
-    gameId = code;  
-    isSyncing = true;  
-    setRoomInfo(`Joined room: ${gameId}`);  
-  
-    // Listen for player list changes  
-    rdb.ref(`games/${gameId}/players`).on('value', snapshot => {  
-      const playersData = snapshot.val() || {};  
-      // Update local players array with synced data  
-      // Convert object to array  
-      players.length = 0; // clear existing  
-      for (const key in playersData) {  
-        players.push(playersData[key]);  
-      }  
-      updatePlayerList();  
-      updateButtonsState();  
-    });  
-  
-    // Listen for current challenge changes  
-    rdb.ref(`games/${gameId}/currentChallenge`).on('value', snapshot => {  
-      const challenge = snapshot.val();  
-      if (challenge) {  
-        showChallenge(challenge);  
-      } else {  
-        resetChallenge();  
-      }  
-    });  
-  
-    // Listen for game mode changes  
-    rdb.ref(`games/${gameId}/mode`).on('value', snapshot => {  
-      const newMode = snapshot.val();  
-      if (newMode) {  
-        mode = newMode;  
-        modeSelect.value = mode;  
-      }  
-    });  
-  }  
-  
-  // Show challenge text in UI  
-  function showChallenge(challengeObj) {  
-    challengeDiv.innerHTML = `<p><strong>${challengeObj.player}</strong> chose <em>${challengeObj.type}</em>: ${challengeObj.text}</p>`;  
-  }  
+<script>
+  // Local players array
+  const players = [];
+
+  // UI Elements
+  const playerNameInput = document.getElementById('player-name');
+  const playerGenderSelect = document.getElementById('player-gender');
+  const addPlayerBtn = document.getElementById('addPlayerBtn');
+  const playerListDiv = document.getElementById('player-list');
+  const modeSelect = document.getElementById('mode');
+  const truthBtn = document.getElementById('truthBtn');
+  const dareBtn = document.getElementById('dareBtn');
+  const challengeDiv = document.getElementById('challenge');
+
+  // Current mode
+  let mode = modeSelect.value;
+
+  // Update buttons state based on players count
+  function updateButtonsState() {
+    const hasPlayers = players.length > 0;
+    truthBtn.disabled = !hasPlayers;
+    dareBtn.disabled = !hasPlayers;
+  }
+
+  // Update the player list UI
+  function updatePlayerList() {
+    if (players.length === 0) {
+      playerListDiv.textContent = 'Players: None';
+      return;
+    }
+    const names = players.map(p => `${p.name} (${p.gender})`);
+    playerListDiv.textContent = 'Players: ' + names.join(', ');
+  }
+
+  // Add player locally and sync to Firebase if connected
+  function addPlayer(name, gender) {
+    name = name.trim();
+    if (!name) {
+      alert('Please enter a player name.');
+      return;
+    }
+    // Prevent duplicates (case insensitive)
+    if (players.some(p => p.name.toLowerCase() === name.toLowerCase())) {
+      alert('Player name already added.');
+      return;
+    }
+    const newPlayer = { name, gender };
+    players.push(newPlayer);
+    updatePlayerList();
+    updateButtonsState();
+
+    // Sync to Firebase if connected
+    if (isSyncing && gameId) {
+      const key = name.toLowerCase();
+      rdb.ref(`games/${gameId}/players/${key}`).set(newPlayer).catch(err => console.error(err));
+    }
+  }
+
+  // Remove player locally and from Firebase if connected
+  function removePlayer(name) {
+    const idx = players.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
+    if (idx === -1) return;
+    players.splice(idx, 1);
+    updatePlayerList();
+    updateButtonsState();
+
+    if (isSyncing && gameId) {
+      const key = name.toLowerCase();
+      rdb.ref(`games/${gameId}/players/${key}`).remove().catch(err => console.error(err));
+    }
+  }
+
+  // Add Player button event
+  addPlayerBtn.addEventListener('click', () => {
+    addPlayer(playerNameInput.value, playerGenderSelect.value);
+    playerNameInput.value = '';
+    playerNameInput.focus();
+  });
+
+  // Mode change sync locally and to Firebase
+  modeSelect.addEventListener('change', () => {
+    mode = modeSelect.value;
+    if (isSyncing && gameId) {
+      rdb.ref(`games/${gameId}/mode`).set(mode).catch(err => console.error(err));
+    }
+  });
+
+  // Start or join a game session (room) and sync game state via Realtime Database
+  function startSession(code) {
+    if (isSyncing) {
+      // If already syncing with another session, detach previous listeners
+      rdb.ref(`games/${gameId}/players`).off();
+      rdb.ref(`games/${gameId}/currentChallenge`).off();
+      rdb.ref(`games/${gameId}/mode`).off();
+      rdb.ref(`games/${gameId}/scoreboard`).off();
+    }
+
+    gameId = code;
+    isSyncing = true;
+    setRoomInfo(`Joined room: ${gameId}`);
+
+    const gameRef = rdb.ref(`games/${gameId}`);
+
+    // Initialize game if not exists
+    gameRef.once('value').then(snap => {
+      if (!snap.exists()) {
+        gameRef.set({
+          createdAt: Date.now(),
+          mode: mode,
+          currentChallenge: null,
+          scoreboard: {},
+          players: {}
+        }).catch(err => console.error(err));
+      }
+    }).catch(err => console.error(err));
+
+    // Listen for player list changes
+    rdb.ref(`games/${gameId}/players`).on('value', snapshot => {
+      const playersData = snapshot.val() || {};
+      players.length = 0; // clear local array
+      for (const key in playersData) {
+        if (Object.hasOwn(playersData, key)) {
+          players.push(playersData[key]);
+        }
+      }
+      updatePlayerList();
+      updateButtonsState();
+      renderScoreboard();
+    });
+
+    // Listen for current challenge changes
+    rdb.ref(`games/${gameId}/currentChallenge`).on('value', snapshot => {
+      const challenge = snapshot.val();
+      if (challenge) {
+        showChallengeForClient(challenge);
+      } else {
+        resetChallenge();
+      }
+    });
+
+    // Listen for game mode changes
+    rdb.ref(`games/${gameId}/mode`).on('value', snapshot => {
+      const newMode = snapshot.val();
+      if (newMode) {
+        mode = newMode;
+        modeSelect.value = mode;
+      }
+    });
+
+    // Listen scoreboard changes
+    rdb.ref(`games/${gameId}/scoreboard`).on('value', snapshot => {
+      const sb = snapshot.val() || {};
+      Object.keys(sb).forEach(k => scoreboard[k] = sb[k]);
+      renderScoreboard();
+    });
+  }
+
+  // Reset challenge UI when no active challenge
+  function resetChallenge() {
+    challengeDiv.innerHTML = `<p>Choose Truth or Dare and have fun!</p>`;
+  }
 </script>
 
 <script>
-  // Utility
+  // Utility to pick a random element from an array
   function pickRandom(array) {
     return array[Math.floor(Math.random() * array.length)];
   }
 
-  // Compose the challenge object (player, type, text)
+  // Build a challenge object to push to Firebase
   function buildChallengeObj(player, type, text) {
     return { player, type, text, byClient: localClientId, timestamp: Date.now() };
   }
 
-  // When a challenge is generated locally, if in session we push it to DB so others see it.
+  // Push current challenge to Firebase DB for syncing
   function pushChallengeToDB(challengeObj) {
     if (!isSyncing || !gameId) return;
     rdb.ref(`games/${gameId}/currentChallenge`).set(challengeObj).catch(err => console.error(err));
   }
 
-  // When scores update (local completion), sync to DB
+  // Push updated scoreboard to Firebase DB
   function pushScoresToDB(scoreboard) {
     if (!isSyncing || !gameId) return;
     rdb.ref(`games/${gameId}/scoreboard`).set(scoreboard).catch(err => console.error(err));
   }
 
-  // Get challenge (returns object, but also if syncing will write to DB)
+  // Generate a challenge of specified type ("truth" or "dare")
   function getChallenge(type) {
     if (players.length === 0) {
       return { player: null, text: "Add players first!" };
@@ -322,10 +368,10 @@
       if (type === "truth") {
         const text = pickRandom(spicyTruths);
         const obj = buildChallengeObj(player, "truth", text);
-        // sync
         pushChallengeToDB(obj);
         return { player, text };
       } else {
+        // Filter dares by gender (or both)
         const filteredDares = spicyDares.filter(
           (d) => d.gender === "both" || d.gender === player.gender
         );
@@ -337,7 +383,7 @@
         pushChallengeToDB(obj);
         return { player, text };
       }
-    } else { // fun
+    } else { // fun mode
       if (type === "truth") {
         const text = pickRandom(funTruths);
         const obj = buildChallengeObj(player, "truth", text);
@@ -352,7 +398,7 @@
     }
   }
 
-  // Display helper (also used when DB pushes a new challenge)
+  // Display challenge in UI for client (called on DB update)
   function showChallengeForClient(challengeObj) {
     if (!challengeObj || !challengeObj.player) {
       challengeDiv.innerHTML = `<p>${challengeObj && challengeObj.text ? challengeObj.text : "Add players first!"}</p>`;
@@ -363,7 +409,7 @@
     challengeDiv.innerHTML = `<p><strong>${name}'s ${capType}:</strong> ${challengeObj.text}</p>`;
   }
 
-  // Event handlers for buttons - these will generate challenge and push to DB inside getChallenge()
+  // Event listeners for Truth and Dare buttons
   truthBtn.addEventListener("click", () => {
     const result = getChallenge("truth");
     if (!result.player) {
@@ -382,10 +428,10 @@
     }
   });
 
-  // Scoreboard: keep local object and sync to DB when updated
-  const scoreboard = {}; // { playerName: points }
+  // Local scoreboard object to track points by player
+  const scoreboard = {};
 
-  // UI helper to update scoreboard area (we'll create a small scoreboard display under challenge)
+  // Render scoreboard UI below challenge
   function renderScoreboard() {
     let sb = document.getElementById('scoreboard');
     if (!sb) {
@@ -409,136 +455,65 @@
     sb.innerHTML = html;
   }
 
-  // When a player completes a challenge, call this to award a point
-  // (you can wire this to the manual Completed button you asked for earlier)
+  // Award a point to a player and sync scoreboard
   function awardPoint(playerName) {
     scoreboard[playerName] = (scoreboard[playerName] || 0) + 1;
     renderScoreboard();
     pushScoresToDB(scoreboard);
   }
 
-  // Provide failing (no points) function too
+  // Fail challenge (no points awarded)
   function failChallenge() {
-    // no score change, but we could push a history if desired
+    // Can extend to log fails if needed
   }
 </script>
+
 <script>
-  // Start session helper - attaches listeners and initializes game node if missing
-  function startSession(code) {
-    if (!code) return;
-    gameId = code;
-    isSyncing = true;
-    setRoomInfo(`Connected to room: ${gameId} — syncing in real time`);
-    // create games/{gameId} if not exists (no overwrite)
-    const gameRef = rdb.ref(`games/${gameId}`);
-    gameRef.once('value').then(snap => {
-      if (!snap.exists()) {
-        // initialize structure
-        gameRef.set({
-          createdAt: Date.now(),
-          mode: mode,
-          currentChallenge: null,
-          scoreboard: {},
-          players: {}
-        }).catch(err => console.error(err));
-      }
-    }).catch(err => console.error(err));
-
-    // Listen players
-    rdb.ref(`games/${gameId}/players`).on('value', snap => {
-      // update local players array (mirror)
-      players.length = 0; // clear
-      const playersObj = snap.val() || {};
-      Object.keys(playersObj).forEach(k => {
-        const p = playersObj[k];
-        players.push({ name: p.name, gender: p.gender });
-        // ensure scoreboard entry exists locally
-      });
-      updatePlayerList();
-      updateButtonsState();
-      renderScoreboard();
-    });
-
-    // Listen mode
-    rdb.ref(`games/${gameId}/mode`).on('value', snap => {
-      const m = snap.val();
-      if (m) {
-        mode = m;
-        modeSelect.value = m;
-      }
-    });
-
-    // Listen currentChallenge
-    rdb.ref(`games/${gameId}/currentChallenge`).on('value', snap => {
-      const cc = snap.val();
-      if (!cc) {
-        // nothing
-        return;
-      }
-      // update UI with the challenge from DB
-      showChallengeForClient(cc);
-    });
-
-    // Listen scoreboard
-    rdb.ref(`games/${gameId}/scoreboard`).on('value', snap => {
-      const sb = snap.val() || {};
-      // copy into local scoreboard
-      Object.keys(sb).forEach(k => scoreboard[k] = sb[k]);
-      renderScoreboard();
-    });
-
-    // Clean-up on disconnect of this client: optionally remove this client-specific data
-    // We don't delete players automatically, because players are real entries; user must remove manually.
-  }
-
-  // Optional: function to remove a player (local UI can call this). If connected, remove from DB.
-  function removePlayer(name) {
-    const key = name.toLowerCase();
-    if (isSyncing && gameId) {
-      rdb.ref(`games/${gameId}/players/${key}`).remove().catch(err => console.error(err));
-    } else {
-      const idx = players.findIndex(p => p.name.toLowerCase() === name.toLowerCase());
-      if (idx >= 0) {
-        players.splice(idx,1);
-        updatePlayerList();
-        updateButtonsState();
-      }
-    }
-  }
-
-  // Provide simple Completed/Failed buttons under challenge to manually award points (UI creation)
+  // Create Completed / Failed buttons UI below challenge div
   (function createCompletionButtons() {
-    const existing = document.getElementById('completionButtons');
-    if (existing) return;
+    // Prevent duplicate creation
+    if (document.getElementById('completionButtons')) return;
+
     const div = document.createElement('div');
     div.id = 'completionButtons';
     div.style.marginTop = '12px';
     div.innerHTML = `
-      <input id="completePlayerInput" placeholder="Player who completed (name)" style="padding:8px;border-radius:6px;border:none;margin-right:6px;" />
+      <input id="completePlayerInput" placeholder="Player who completed (name)" 
+        style="padding:8px;border-radius:6px;border:none;margin-right:6px;" 
+        aria-label="Player who completed challenge"/>
       <button id="completedBtn" style="background-color:#4CAF50;color:#fff;">Completed</button>
       <button id="failedBtn" style="background-color:#f44336;color:#fff;margin-left:6px;">Failed</button>
     `;
+
     challengeDiv.parentNode.insertBefore(div, challengeDiv.nextSibling);
 
+    // Award point button
     document.getElementById('completedBtn').addEventListener('click', () => {
       const pname = document.getElementById('completePlayerInput').value.trim();
-      if (!pname) return alert('Enter player name who completed the challenge.');
+      if (!pname) {
+        alert('Enter player name who completed the challenge.');
+        return;
+      }
       awardPoint(pname);
       document.getElementById('completePlayerInput').value = '';
-      // Optionally clear current challenge in DB
-      if (isSyncing && gameId) rdb.ref(`games/${gameId}/currentChallenge`).set(null);
+      // Clear current challenge in DB
+      if (isSyncing && gameId) {
+        rdb.ref(`games/${gameId}/currentChallenge`).set(null);
+      }
       challengeDiv.innerHTML = "<p>Choose Truth or Dare and have fun!</p>";
     });
 
+    // Fail challenge button
     document.getElementById('failedBtn').addEventListener('click', () => {
-      const pname = document.getElementById('completePlayerInput').value.trim();
       document.getElementById('completePlayerInput').value = '';
-      if (isSyncing && gameId) rdb.ref(`games/${gameId}/currentChallenge`).set(null);
+      if (isSyncing && gameId) {
+        rdb.ref(`games/${gameId}/currentChallenge`).set(null);
+      }
       challengeDiv.innerHTML = "<p>Challenge failed — next turn!</p>";
     });
   })();
 
-  // Ensure local UI initial state
+  // On page load, initialize the UI state:
   updatePlayerList();
   updateButtonsState();
   renderScoreboard();
