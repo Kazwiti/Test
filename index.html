@@ -1,94 +1,276 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Truth or Dare Multiplayer Lobby</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #111;
-      color: #eee;
-      text-align: center;
-      padding: 40px 20px;
-    }
-    input, button {
-      font-size: 1rem;
-      padding: 10px 15px;
-      margin: 10px 5px;
-      border-radius: 8px;
-      border: none;
-      width: 200px;
-    }
-    button {
-      cursor: pointer;
-      background-color: #4CAF50;
-      color: white;
-      font-weight: bold;
-      transition: background-color 0.3s ease;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    h1 {
-      margin-bottom: 20px;
-    }
-    #errorMsg {
-      color: #f44336;
-      margin-top: 15px;
-      height: 18px;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Truth or Dare - Extremely Naughty Edition</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    text-align: center;
+    padding: 20px;
+  }
+  input, select, button {
+    padding: 10px 15px;
+    margin: 5px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  #player-list {
+    margin: 10px 0;
+    font-weight: bold;
+  }
+  #challenge {
+    margin-top: 30px;
+    padding: 20px;
+    background: #222;
+    border-radius: 12px;
+    min-height: 100px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #challenge p {
+    font-size: 1.2rem;
+    user-select: text;
+  }
+  label {
+    font-weight: bold;
+  }
+  #mode-select {
+    margin-top: 15px;
+  }
+
+  /* small lobby area styling */
+  #lobby {
+    margin-bottom: 12px;
+  }
+  #roomInfo {
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #ddd;
+  }
+</style>
 </head>
 <body>
 
-  <h1>Truth or Dare Multiplayer</h1>
-  
-  <input type="text" id="roomInput" placeholder="Enter Room Code" aria-label="Room code" maxlength="8" />
-  <br />
-  <button id="joinBtn">Join Room</button>
-  <button id="createBtn">Create New Room</button>
-  
-  <div id="errorMsg" role="alert" aria-live="assertive"></div>
+<h1>Truth or Dare - Extremely Naughty Edition</h1>
 
-  <script>
-    const roomInput = document.getElementById('roomInput');
-    const joinBtn = document.getElementById('joinBtn');
-    const createBtn = document.getElementById('createBtn');
-    const errorMsg = document.getElementById('errorMsg');
+<!-- Login system -->
+<div id="loginSection">
+  <input type="text" id="usernameInput" placeholder="Enter username" aria-label="Username" />
+  <button id="loginBtn">Login</button>
+</div>
 
-    function isValidRoomCode(code) {
-      return /^[A-Za-z0-9]{3,8}$/.test(code);
+<div id="gameSection" style="display:none;">
+  <div id="roomInfo" aria-live="polite"></div>
+
+  <div id="player-list" aria-live="polite" aria-atomic="true">Players: None</div>
+
+  <div id="mode-select">
+    <label for="mode">Choose game mode:</label>
+    <select id="mode" aria-label="Game mode">
+      <option value="spicy" selected>Extremely Naughty</option>
+      <option value="fun">Fun</option>
+    </select>
+  </div>
+
+  <div>
+    <button id="truthBtn" disabled>Truth</button>
+    <button id="dareBtn" disabled>Dare</button>
+  </div>
+
+  <div id="challenge" role="region" aria-live="polite" aria-atomic="true">
+    <p>Add players to start the game!</p>
+  </div>
+</div>
+
+<!-- Firebase Realtime Database (compat) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNSy0zdokELU4CxSoy7zJXHAuBPQqLaO0",
+    authDomain: "truthor-dare-multiplayer.firebaseapp.com",
+    databaseURL: "https://truthor-dare-multiplayer-default-rtdb.firebaseio.com",
+    projectId: "truthor-dare-multiplayer",
+    storageBucket: "truthor-dare-multiplayer.firebasestorage.app",
+    messagingSenderId: "51895740835",
+    appId: "1:51895740835:web:783c3755a60ca0ad831216",
+    measurementId: "G-V857KJ9N6L"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const rdb = firebase.database();
+
+  let username = "";
+  let gameId = "main-room"; // Single shared room for all
+  let players = [];
+  let mode = "spicy";
+const loginBtn = document.getElementById("loginBtn");
+  const usernameInput = document.getElementById("usernameInput");
+  const loginSection = document.getElementById("loginSection");
+  const gameSection = document.getElementById("gameSection");
+  const roomInfo = document.getElementById("roomInfo");
+  const modeSelect = document.getElementById("mode");
+  const truthBtn = document.getElementById("truthBtn");
+  const dareBtn = document.getElementById("dareBtn");
+  const challengeDiv = document.getElementById("challenge");
+
+  loginBtn.addEventListener("click", () => {
+    const name = usernameInput.value.trim();
+    if (!name) {
+      alert("Please enter a username.");
+      return;
+    }
+    if (players.length >= 2) {
+      alert("Room is full. Only 2 players allowed.");
+      return;
+    }
+    username = name;
+    addPlayerToRoom(username);
+    loginSection.style.display = "none";
+    gameSection.style.display = "block";
+    listenForPlayers();
+    listenForChallenges();
+    listenForMode();
+  });
+
+  function addPlayerToRoom(name) {
+    const playerRef = rdb.ref(`games/${gameId}/players/${name}`);
+    playerRef.set({ name });
+  }
+
+  function listenForPlayers() {
+    rdb.ref(`games/${gameId}/players`).on("value", (snapshot) => {
+      const playersData = snapshot.val() || {};
+      players = Object.values(playersData);
+      updatePlayerList();
+      updateButtonsState();
+    });
+  }
+
+  function listenForChallenges() {
+    rdb.ref(`games/${gameId}/currentChallenge`).on("value", (snapshot) => {
+      const challenge = snapshot.val();
+      if (challenge) {
+        challengeDiv.innerHTML = `<p><strong>${challenge.player}</strong> chose <em>${challenge.type}</em>: ${challenge.text}</p>`;
+      }
+    });
+  }
+
+  function listenForMode() {
+    rdb.ref(`games/${gameId}/mode`).on("value", (snapshot) => {
+      const newMode = snapshot.val();
+      if (newMode) {
+        mode = newMode;
+        modeSelect.value = newMode;
+      }
+    });
+  }
+
+  function updatePlayerList() {
+    if (players.length === 0) {
+      document.getElementById("player-list").textContent = "Players: None";
+    } else {
+      document.getElementById("player-list").textContent = "Players: " + players.map(p => p.name).join(", ");
+    }
+  }
+
+  function updateButtonsState() {
+    if (players.length === 2) {
+      truthBtn.disabled = false;
+      dareBtn.disabled = false;
+    } else {
+      truthBtn.disabled = true;
+      dareBtn.disabled = true;
+    }
+  }
+
+truthBtn.addEventListener("click", () => {
+    pickChallenge("truth");
+  });
+
+  dareBtn.addEventListener("click", () => {
+    pickChallenge("dare");
+  });
+
+  modeSelect.addEventListener("change", () => {
+    mode = modeSelect.value;
+    rdb.ref(`games/${gameId}/mode`).set(mode);
+  });
+
+  function pickChallenge(type) {
+    const activePlayer = players[Math.floor(Math.random() * players.length)];
+    let challengeText = "";
+
+    if (mode === "spicy") {
+      if (activePlayer.gender === "male") {
+        challengeText = type === "truth" 
+          ? spicyTruthsMale[Math.floor(Math.random() * spicyTruthsMale.length)] 
+          : spicyDaresMale[Math.floor(Math.random() * spicyDaresMale.length)];
+      } else {
+        challengeText = type === "truth" 
+          ? spicyTruthsFemale[Math.floor(Math.random() * spicyTruthsFemale.length)] 
+          : spicyDaresFemale[Math.floor(Math.random() * spicyDaresFemale.length)];
+      }
+    } else {
+      challengeText = type === "truth" 
+        ? funTruths[Math.floor(Math.random() * funTruths.length)] 
+        : funDares[Math.floor(Math.random() * funDares.length)];
     }
 
-    joinBtn.addEventListener('click', () => {
-      const code = roomInput.value.trim().toUpperCase();
-      if (!code) {
-        errorMsg.textContent = 'Please enter a room code to join.';
-        return;
-      }
-      if (!isValidRoomCode(code)) {
-        errorMsg.textContent = 'Room code must be 3-8 alphanumeric characters.';
-        return;
-      }
-      errorMsg.textContent = '';
-      window.location.href = `multiplayer.html?game=${code}`;
-    });
+    const challengeObj = {
+      player: activePlayer.name,
+      type: type,
+      text: challengeText
+    };
 
-    createBtn.addEventListener('click', () => {
-      // Generate a 6-character alphanumeric code
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-      errorMsg.textContent = '';
-      window.location.href = `multiplayer.html?game=${code}`;
-    });
+    rdb.ref(`games/${gameId}/currentChallenge`).set(challengeObj);
+  }
 
-    // Optionally allow pressing Enter in input to join room
-    roomInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        joinBtn.click();
-      }
-    });
-  </script>
+// Example Truths & Dares arrays
+  const spicyTruthsMale = [
+    "What's your wildest fantasy?",
+    "Have you ever had a naughty dream about someone here?"
+  ];
+  const spicyDaresMale = [
+    "Send a flirty text to someone right now.",
+    "Do 10 push-ups shirtless."
+  ];
+  const spicyTruthsFemale = [
+    "What's your most secret turn-on?",
+    "Who would you kiss in this room?"
+  ];
+  const spicyDaresFemale = [
+    "Send a selfie in your sexiest pose.",
+    "Whisper something naughty in the mic."
+  ];
+  const funTruths = [
+    "What's your favorite childhood memory?",
+    "If you could be invisible for a day, what would you do?"
+  ];
+  const funDares = [
+    "Do your best celebrity impression.",
+    "Sing the chorus of your favorite song."
+  ];
 
+  let username = "";
+  let players = [];
+  let mode = "spicy";
+  let gameId = "mainroom"; // fixed room for login system
+</script>
 </body>
 </html>
+
