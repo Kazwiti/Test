@@ -50,8 +50,6 @@
   #mode-select {
     margin-top: 15px;
   }
-
-  /* small lobby area styling */
   #lobby {
     margin-bottom: 12px;
   }
@@ -115,10 +113,12 @@
   const rdb = firebase.database();
 
   let username = "";
-  let gameId = "main-room"; // Single shared room for all
+  let gender = "";
   let players = [];
   let mode = "spicy";
-const loginBtn = document.getElementById("loginBtn");
+  let gameId = "main-room"; // fixed room
+
+  const loginBtn = document.getElementById("loginBtn");
   const usernameInput = document.getElementById("usernameInput");
   const loginSection = document.getElementById("loginSection");
   const gameSection = document.getElementById("gameSection");
@@ -130,30 +130,43 @@ const loginBtn = document.getElementById("loginBtn");
 
   loginBtn.addEventListener("click", () => {
     const name = usernameInput.value.trim();
+    const gen = prompt("Enter your gender (male/female)").toLowerCase();
     if (!name) {
       alert("Please enter a username.");
       return;
     }
-    if (players.length >= 2) {
-      alert("Room is full. Only 2 players allowed.");
+    if (gen !== "male" && gen !== "female") {
+      alert("Gender must be male or female.");
       return;
     }
-    username = name;
-    addPlayerToRoom(username);
-    loginSection.style.display = "none";
-    gameSection.style.display = "block";
-    listenForPlayers();
-    listenForChallenges();
-    listenForMode();
+
+    // Check DB for player count before adding
+    rdb.ref(`games/${gameId}/players`).once("value").then(snapshot => {
+      const currentPlayers = snapshot.val() || {};
+      const playerCount = Object.keys(currentPlayers).length;
+      if (playerCount >= 2) {
+        alert("Room is full. Only 2 players allowed.");
+        return;
+      }
+      username = name;
+      gender = gen;
+      addPlayerToRoom(username, gender);
+      loginSection.style.display = "none";
+      gameSection.style.display = "block";
+      roomInfo.textContent = `You are in room: ${gameId}`;
+      listenForPlayers();
+      listenForChallenges();
+      listenForMode();
+    });
   });
 
-  function addPlayerToRoom(name) {
+  function addPlayerToRoom(name, gender) {
     const playerRef = rdb.ref(`games/${gameId}/players/${name}`);
-    playerRef.set({ name });
+    playerRef.set({ name, gender });
   }
 
   function listenForPlayers() {
-    rdb.ref(`games/${gameId}/players`).on("value", (snapshot) => {
+    rdb.ref(`games/${gameId}/players`).on("value", snapshot => {
       const playersData = snapshot.val() || {};
       players = Object.values(playersData);
       updatePlayerList();
@@ -162,7 +175,7 @@ const loginBtn = document.getElementById("loginBtn");
   }
 
   function listenForChallenges() {
-    rdb.ref(`games/${gameId}/currentChallenge`).on("value", (snapshot) => {
+    rdb.ref(`games/${gameId}/currentChallenge`).on("value", snapshot => {
       const challenge = snapshot.val();
       if (challenge) {
         challengeDiv.innerHTML = `<p><strong>${challenge.player}</strong> chose <em>${challenge.type}</em>: ${challenge.text}</p>`;
@@ -171,7 +184,7 @@ const loginBtn = document.getElementById("loginBtn");
   }
 
   function listenForMode() {
-    rdb.ref(`games/${gameId}/mode`).on("value", (snapshot) => {
+    rdb.ref(`games/${gameId}/mode`).on("value", snapshot => {
       const newMode = snapshot.val();
       if (newMode) {
         mode = newMode;
@@ -181,30 +194,18 @@ const loginBtn = document.getElementById("loginBtn");
   }
 
   function updatePlayerList() {
-    if (players.length === 0) {
-      document.getElementById("player-list").textContent = "Players: None";
-    } else {
-      document.getElementById("player-list").textContent = "Players: " + players.map(p => p.name).join(", ");
-    }
+    document.getElementById("player-list").textContent = 
+      players.length ? "Players: " + players.map(p => p.name).join(", ") : "Players: None";
   }
 
   function updateButtonsState() {
-    if (players.length === 2) {
-      truthBtn.disabled = false;
-      dareBtn.disabled = false;
-    } else {
-      truthBtn.disabled = true;
-      dareBtn.disabled = true;
-    }
+    const isTwoPlayers = players.length === 2;
+    truthBtn.disabled = !isTwoPlayers;
+    dareBtn.disabled = !isTwoPlayers;
   }
 
-truthBtn.addEventListener("click", () => {
-    pickChallenge("truth");
-  });
-
-  dareBtn.addEventListener("click", () => {
-    pickChallenge("dare");
-  });
+  truthBtn.addEventListener("click", () => pickChallenge("truth"));
+  dareBtn.addEventListener("click", () => pickChallenge("dare"));
 
   modeSelect.addEventListener("change", () => {
     mode = modeSelect.value;
@@ -218,59 +219,32 @@ truthBtn.addEventListener("click", () => {
     if (mode === "spicy") {
       if (activePlayer.gender === "male") {
         challengeText = type === "truth" 
-          ? spicyTruthsMale[Math.floor(Math.random() * spicyTruthsMale.length)] 
-          : spicyDaresMale[Math.floor(Math.random() * spicyDaresMale.length)];
+          ? questionSets.spicy.male.truths[Math.floor(Math.random() * questionSets.spicy.male.truths.length)] 
+          : questionSets.spicy.male.dares[Math.floor(Math.random() * questionSets.spicy.male.dares.length)];
       } else {
         challengeText = type === "truth" 
-          ? spicyTruthsFemale[Math.floor(Math.random() * spicyTruthsFemale.length)] 
-          : spicyDaresFemale[Math.floor(Math.random() * spicyDaresFemale.length)];
+          ? questionSets.spicy.female.truths[Math.floor(Math.random() * questionSets.spicy.female.truths.length)] 
+          : questionSets.spicy.female.dares[Math.floor(Math.random() * questionSets.spicy.female.dares.length)];
       }
     } else {
-      challengeText = type === "truth" 
-        ? funTruths[Math.floor(Math.random() * funTruths.length)] 
-        : funDares[Math.floor(Math.random() * funDares.length)];
+      if (activePlayer.gender === "male") {
+        challengeText = type === "truth" 
+          ? questionSets.fun.male.truths[Math.floor(Math.random() * questionSets.fun.male.truths.length)] 
+          : questionSets.fun.male.dares[Math.floor(Math.random() * questionSets.fun.male.dares.length)];
+      } else {
+        challengeText = type === "truth" 
+          ? questionSets.fun.female.truths[Math.floor(Math.random() * questionSets.fun.female.truths.length)] 
+          : questionSets.fun.female.dares[Math.floor(Math.random() * questionSets.fun.female.dares.length)];
+      }
     }
 
-    const challengeObj = {
-      player: activePlayer.name,
-      type: type,
-      text: challengeText
-    };
-
+    const challengeObj = { player: activePlayer.name, type, text: challengeText };
     rdb.ref(`games/${gameId}/currentChallenge`).set(challengeObj);
   }
-
-// Example Truths & Dares arrays
-  const spicyTruthsMale = [
-    "What's your wildest fantasy?",
-    "Have you ever had a naughty dream about someone here?"
-  ];
-  const spicyDaresMale = [
-    "Send a flirty text to someone right now.",
-    "Do 10 push-ups shirtless."
-  ];
-  const spicyTruthsFemale = [
-    "What's your most secret turn-on?",
-    "Who would you kiss in this room?"
-  ];
-  const spicyDaresFemale = [
-    "Send a selfie in your sexiest pose.",
-    "Whisper something naughty in the mic."
-  ];
-  const funTruths = [
-    "What's your favorite childhood memory?",
-    "If you could be invisible for a day, what would you do?"
-  ];
-  const funDares = [
-    "Do your best celebrity impression.",
-    "Sing the chorus of your favorite song."
-  ];
-
-  let username = "";
-  let players = [];
-  let mode = "spicy";
-  let gameId = "mainroom"; // fixed room for login system
 </script>
+
+<!-- Load Questions -->
+<script src="questions.js"></script>
+
 </body>
 </html>
-

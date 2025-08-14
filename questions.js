@@ -2,16 +2,17 @@
 // EXTREMELY NAUGHTY MODE
 // =========================
 
-// --- EXTREMELY NAUGHTY - TRUTHS ---
+// --- MALE TRUTHS ---
 const maleTruths = [
-  // Add "male" specific truths here (duplicated with 'both' ones below if needed)
+  // Male-specific truths (add if needed)
 ];
 
+// --- FEMALE TRUTHS ---
 const femaleTruths = [
-  // Add "female" specific truths here (duplicated with 'both' ones below if needed)
+  // Female-specific truths (add if needed)
 ];
 
-// --- EXTREMELY NAUGHTY - DARES ---
+// --- MALE DARES ---
 const maleDares = [
   "Male. Act out your favorite intimate move on camera.",
   "Male. Pretend you’re making out with me for 20 seconds on video.",
@@ -22,6 +23,7 @@ const maleDares = [
   "Male. Send a slow video of you tracing your abs and chest with your fingertips, making it clear you’re thinking of me."
 ];
 
+// --- FEMALE DARES ---
 const femaleDares = [
   "Female. Moan softly into the mic like you’re thinking about me.",
   "Female. Send a video playing with your belly button with only an underwear on.",
@@ -33,7 +35,7 @@ const femaleDares = [
   "Female. Tell me who in your contact list you would most want us to have a threesome with."
 ];
 
-// --- EXTREMELY NAUGHTY - BOTH (duplicated into male/female) ---
+// --- BOTH DARES (added to both male & female) ---
 const bothNaughtyDares = [
   "Both. Send me a teasing photo — just enough to make me want more.",
   "Both. Whisper your dirtiest fantasy about me into the mic for 15 seconds.",
@@ -62,13 +64,10 @@ const bothNaughtyDares = [
   "Both. Make your silliest face, send a picture"
 ];
 
-// Duplicate "both" dares into male & female lists
 maleDares.push(...bothNaughtyDares);
 femaleDares.push(...bothNaughtyDares);
 
-// =========================
-// EXTREMELY NAUGHTY - BOTH TRUTHS
-// =========================
+// --- BOTH TRUTHS (added to both male & female) ---
 const bothNaughtyTruths = [
   "Both. What's the most erotic dream you've had about me?",
   "Both. What's the dirtiest thing you’ve ever done in public?",
@@ -97,14 +96,11 @@ const bothNaughtyTruths = [
   "Both. What’s the wildest thing you’d let me do to you?"
 ];
 
-// Add male-specific truths here if any
 maleTruths.push(...bothNaughtyTruths);
-
-// Add female-specific truths here if any
 femaleTruths.push(...bothNaughtyTruths);
 
 // =========================
-// FUN MODE (Placeholders)
+// FUN MODE (placeholders)
 // =========================
 const funMaleTruths = [
   "Placeholder fun male truth 1",
@@ -176,7 +172,7 @@ const funFemaleDares = [
 ];
 
 // =========================
-// GAME DATA EXPORT
+// EXPORT TO GAME
 // =========================
 const questionSets = {
   spicy: {
