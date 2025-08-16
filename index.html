@@ -5,164 +5,242 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Truth or Dare - Extremely Naughty Edition</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #111; color: #eee; text-align: center; padding: 20px; }
-  input, select, button { padding: 10px 15px; margin: 5px; font-size: 1rem; border-radius: 8px; border: none; }
-  button { cursor: pointer; }
-  button:disabled { opacity: 0.5; cursor: default; }
-  #player-list { margin: 10px 0; font-weight: bold; }
-  #challenge { margin-top: 30px; padding: 20px; background: #222; border-radius: 12px; min-height: 100px; max-width: 400px; margin-left:auto; margin-right:auto; }
-  #challenge p { font-size: 1.2rem; user-select: text; }
-  label { font-weight: bold; }
+  body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    text-align: center;
+    padding: 20px;
+  }
+  input, select, button {
+    padding: 10px 15px;
+    margin: 5px;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+  #player-list {
+    margin: 10px 0;
+    font-weight: bold;
+  }
+  #challenge {
+    margin-top: 30px;
+    padding: 20px;
+    background: #222;
+    border-radius: 12px;
+    min-height: 100px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  #challenge p {
+    font-size: 1.2rem;
+    user-select: text;
+  }
+  label {
+    font-weight: bold;
+  }
+  #mode-select {
+    margin-top: 15px;
+  }
+  #lobby {
+    margin-bottom: 12px;
+  }
+  #roomInfo {
+    margin-top: 8px;
+    font-size: 0.95rem;
+    color: #ddd;
+  }
 </style>
 </head>
 <body>
+
 <h1>Truth or Dare - Extremely Naughty Edition</h1>
 
-<!-- Login -->
+<!-- Login system -->
 <div id="loginSection">
-  <input type="text" id="usernameInput" placeholder="Enter username" />
+  <input type="text" id="usernameInput" placeholder="Enter username" aria-label="Username" />
   <select id="genderSelect">
-    <option value="">Select Gender</option>
+    <option value="">Select gender</option>
     <option value="male">Male</option>
     <option value="female">Female</option>
   </select>
   <button id="loginBtn">Login</button>
 </div>
 
-<!-- Game -->
 <div id="gameSection" style="display:none;">
-  <div id="player-list">Players: None</div>
-  <div>
+  <div id="roomInfo" aria-live="polite"></div>
+  <div id="player-list" aria-live="polite" aria-atomic="true">Players: None</div>
+
+  <div id="mode-select">
     <label for="mode">Choose game mode:</label>
-    <select id="mode">
+    <select id="mode" aria-label="Game mode">
       <option value="spicy" selected>Extremely Naughty</option>
       <option value="fun">Fun</option>
     </select>
   </div>
+
   <div>
     <button id="truthBtn" disabled>Truth</button>
     <button id="dareBtn" disabled>Dare</button>
   </div>
-  <div id="challenge"><p>Add players to start the game!</p></div>
+
+  <div id="challenge" role="region" aria-live="polite" aria-atomic="true">
+    <p>Add players to start the game!</p>
+  </div>
 </div>
 
-<!-- Firebase -->
+<!-- Firebase Realtime Database (compat) -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyDNSy0zdokELU4CxSoy7zJXHAuBPQqLaO0",
-  authDomain: "truthor-dare-multiplayer.firebaseapp.com",
-  databaseURL: "https://truthor-dare-multiplayer-default-rtdb.firebaseio.com",
-  projectId: "truthor-dare-multiplayer",
-  storageBucket: "truthor-dare-multiplayer.firebasestorage.app",
-  messagingSenderId: "51895740835",
-  appId: "1:51895740835:web:783c3755a60ca0ad831216",
-  measurementId: "G-V857KJ9N6L"
-};
-firebase.initializeApp(firebaseConfig);
-const rdb = firebase.database();
+  // --- Firebase config ---
+  const firebaseConfig = {
+    apiKey: "AIzaSyDNSy0zdokELU4CxSoy7zJXHAuBPQqLaO0",
+    authDomain: "truthor-dare-multiplayer.firebaseapp.com",
+    databaseURL: "https://truthor-dare-multiplayer-default-rtdb.firebaseio.com",
+    projectId: "truthor-dare-multiplayer",
+    storageBucket: "truthor-dare-multiplayer.appspot.com", // ✅ fixed
+    messagingSenderId: "51895740835",
+    appId: "1:51895740835:web:783c3755a60ca0ad831216",
+    measurementId: "G-V857KJ9N6L"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const rdb = firebase.database();
 
-let username = "";
-let gender = "";
-let players = [];
-let mode = "spicy";
-const gameId = "main-room";
+  // --- Game state ---
+  let username = "";
+  let gender = "";
+  let players = [];
+  let mode = "spicy";
+  const gameId = "main-room"; // ✅ consistent everywhere
 
-const loginBtn = document.getElementById("loginBtn");
-const usernameInput = document.getElementById("usernameInput");
-const genderSelect = document.getElementById("genderSelect");
-const loginSection = document.getElementById("loginSection");
-const gameSection = document.getElementById("gameSection");
-const playerListDiv = document.getElementById("player-list");
-const modeSelect = document.getElementById("mode");
-const truthBtn = document.getElementById("truthBtn");
-const dareBtn = document.getElementById("dareBtn");
-const challengeDiv = document.getElementById("challenge");
+  // --- Elements ---
+  const loginBtn = document.getElementById("loginBtn");
+  const usernameInput = document.getElementById("usernameInput");
+  const genderSelect = document.getElementById("genderSelect");
+  const loginSection = document.getElementById("loginSection");
+  const gameSection = document.getElementById("gameSection");
+  const roomInfo = document.getElementById("roomInfo");
+  const modeSelect = document.getElementById("mode");
+  const truthBtn = document.getElementById("truthBtn");
+  const dareBtn = document.getElementById("dareBtn");
+  const challengeDiv = document.getElementById("challenge");
 
-loginBtn.addEventListener("click", () => {
-  username = usernameInput.value.trim();
-  gender = genderSelect.value;
-  if (!username || !gender) { alert("Enter username & gender"); return; }
-
-  const playerRef = rdb.ref(`games/${gameId}/players/${username}`);
-  playerRef.set({ name: username, gender: gender });
-  playerRef.onDisconnect().remove(); // auto remove on close
-
-  loginSection.style.display = "none";
-  gameSection.style.display = "block";
-
-  listenForPlayers();
-  listenForChallenges();
-  listenForMode();
-});
-
-function listenForPlayers() {
-  rdb.ref(`games/${gameId}/players`).on("value", snap => {
-    players = Object.values(snap.val() || {});
-    playerListDiv.textContent = players.length
-      ? "Players: " + players.map(p => p.name).join(", ")
-      : "Players: None";
-    truthBtn.disabled = dareBtn.disabled = (players.length !== 2);
+  // --- Login handler ---
+  loginBtn.addEventListener("click", () => {
+    const name = usernameInput.value.trim();
+    const selectedGender = genderSelect.value;
+    if (!name) {
+      alert("Please enter a username.");
+      return;
+    }
+    if (!selectedGender) {
+      alert("Please select your gender.");
+      return;
+    }
+    if (players.length >= 2) {
+      alert("Room is full. Only 2 players allowed.");
+      return;
+    }
+    username = name;
+    gender = selectedGender;
+    addPlayerToRoom(username, gender);
+    loginSection.style.display = "none";
+    gameSection.style.display = "block";
+    roomInfo.textContent = `You are logged in as ${username} (${gender}). Room: ${gameId}`;
+    listenForPlayers();
+    listenForChallenges();
+    listenForMode();
   });
-}
 
-function listenForChallenges() {
-  rdb.ref(`games/${gameId}/currentChallenge`).on("value", snap => {
-    const c = snap.val();
-    if (c) challengeDiv.innerHTML = `<p><strong>${c.player}</strong> chose <em>${c.type}</em>: ${c.text}</p>`;
-  });
-}
-function listenForMode() {
-  rdb.ref(`games/${gameId}/mode`).on("value", snap => {
-    const m = snap.val();
-    if (m) { mode = m; modeSelect.value = m; }
-  });
-}
-
-modeSelect.addEventListener("change", () => {
-  mode = modeSelect.value;
-  rdb.ref(`games/${gameId}/mode`).set(mode);
-});
-
-truthBtn.addEventListener("click", () => pickChallenge("truth"));
-dareBtn.addEventListener("click", () => pickChallenge("dare"));
-
-function pickChallenge(type) {
-  const activePlayer = players[Math.floor(Math.random() * players.length)];
-  let challengeText = "";
-  if (mode === "spicy") {
-    challengeText = type === "truth"
-      ? questionSets.spicy[activePlayer.gender].truths[Math.floor(Math.random()*questionSets.spicy[activePlayer.gender].truths.length)]
-      : questionSets.spicy[activePlayer.gender].dares[Math.floor(Math.random()*questionSets.spicy[activePlayer.gender].dares.length)];
-  } else {
-    challengeText = type === "truth"
-      ? questionSets.fun[activePlayer.gender].truths[Math.floor(Math.random()*questionSets.fun[activePlayer.gender].truths.length)]
-      : questionSets.fun[activePlayer.gender].dares[Math.floor(Math.random()*questionSets.fun[activePlayer.gender].dares.length)];
+  // --- Firebase functions ---
+  function addPlayerToRoom(name, gender) {
+    const playerRef = rdb.ref(`games/${gameId}/players/${name}`);
+    playerRef.set({ name, gender });
   }
-  rdb.ref(`games/${gameId}/currentChallenge`).set({ player: activePlayer.name, type, text: challengeText });
-}
 
-// ================= TRUTH & DARES =================
-const maleTruths = ["What's your wildest fantasy?"];
-const femaleTruths = ["Who would you kiss in this room?"];
-const maleDares = ["Male Dare Example"];
-const femaleDares = ["Female Dare Example"];
-maleDares.push("Both Dare Example");
-femaleDares.push("Both Dare Example");
-maleTruths.push("Both Truth Example");
-femaleTruths.push("Both Truth Example");
+  function listenForPlayers() {
+    rdb.ref(`games/${gameId}/players`).on("value", (snapshot) => {
+      const playersData = snapshot.val() || {};
+      players = Object.values(playersData);
+      updatePlayerList();
+      updateButtonsState();
+    });
+  }
 
-const funMaleTruths = ["Fun male truth 1"];
-const funFemaleTruths = ["Fun female truth 1"];
-const funMaleDares = ["Fun male dare 1"];
-const funFemaleDares = ["Fun female dare 1"];
+  function listenForChallenges() {
+    rdb.ref(`games/${gameId}/currentChallenge`).on("value", (snapshot) => {
+      const challenge = snapshot.val();
+      if (challenge) {
+        challengeDiv.innerHTML = `<p><strong>${challenge.player}</strong> chose <em>${challenge.type}</em>: ${challenge.text}</p>`;
+      }
+    });
+  }
 
-const questionSets = {
-  spicy: { male: { truths: maleTruths, dares: maleDares }, female: { truths: femaleTruths, dares: femaleDares }},
-  fun: { male: { truths: funMaleTruths, dares: funMaleDares }, female: { truths: funFemaleTruths, dares: funFemaleDares }}
-};
+  function listenForMode() {
+    rdb.ref(`games/${gameId}/mode`).on("value", (snapshot) => {
+      const newMode = snapshot.val();
+      if (newMode) {
+        mode = newMode;
+        modeSelect.value = newMode;
+      }
+    });
+  }
+
+  // --- UI updates ---
+  function updatePlayerList() {
+    if (players.length === 0) {
+      document.getElementById("player-list").textContent = "Players: None";
+    } else {
+      document.getElementById("player-list").textContent =
+        "Players: " + players.map(p => `${p.name} (${p.gender})`).join(", ");
+    }
+  }
+
+  function updateButtonsState() {
+    truthBtn.disabled = players.length !== 2;
+    dareBtn.disabled = players.length !== 2;
+  }
+
+  // --- Button actions ---
+  truthBtn.addEventListener("click", () => pickChallenge("truth"));
+  dareBtn.addEventListener("click", () => pickChallenge("dare"));
+
+  modeSelect.addEventListener("change", () => {
+    mode = modeSelect.value;
+    rdb.ref(`games/${gameId}/mode`).set(mode);
+  });
+
+  function pickChallenge(type) {
+    const activePlayer = players[Math.floor(Math.random() * players.length)];
+    let challengeText = "";
+
+    if (mode === "spicy") {
+      challengeText = type === "truth"
+        ? questionSets.spicy[activePlayer.gender].truths[Math.floor(Math.random() * questionSets.spicy[activePlayer.gender].truths.length)]
+        : questionSets.spicy[activePlayer.gender].dares[Math.floor(Math.random() * questionSets.spicy[activePlayer.gender].dares.length)];
+    } else {
+      challengeText = type === "truth"
+        ? questionSets.fun[activePlayer.gender].truths[Math.floor(Math.random() * questionSets.fun[activePlayer.gender].truths.length)]
+        : questionSets.fun[activePlayer.gender].dares[Math.floor(Math.random() * questionSets.fun[activePlayer.gender].dares.length)];
+    }
+
+    const challengeObj = { player: activePlayer.name, type, text: challengeText };
+    rdb.ref(`games/${gameId}/currentChallenge`).set(challengeObj);
+  }
 </script>
+
+<!-- Questions.js embedded for now -->
+<script src="questions.js"></script>
+
 </body>
 </html>
