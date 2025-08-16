@@ -5,69 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Truth or Dare - Extremely Naughty Edition</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #111;
-    color: #eee;
-    text-align: center;
-    padding: 20px;
-  }
-  input, select, button {
-    padding: 10px 15px;
-    margin: 5px;
-    font-size: 1rem;
-    border-radius: 8px;
-    border: none;
-  }
-  button {
-    cursor: pointer;
-  }
-  button:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-  #player-list {
-    margin: 10px 0;
-    font-weight: bold;
-  }
-  #challenge {
-    margin-top: 30px;
-    padding: 20px;
-    background: #222;
-    border-radius: 12px;
-    min-height: 100px;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  #challenge p {
-    font-size: 1.2rem;
-    user-select: text;
-  }
-  label {
-    font-weight: bold;
-  }
-  #mode-select {
-    margin-top: 15px;
-  }
-  #lobby {
-    margin-bottom: 12px;
-  }
-  #roomInfo {
-    margin-top: 8px;
-    font-size: 0.95rem;
-    color: #ddd;
-  }
+  body { font-family: Arial, sans-serif; background: #111; color: #eee; text-align: center; padding: 20px; }
+  input, select, button { padding: 10px 15px; margin: 5px; font-size: 1rem; border-radius: 8px; border: none; }
+  button { cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  #player-list { margin: 10px 0; font-weight: bold; }
+  #challenge { margin-top: 30px; padding: 20px; background: #222; border-radius: 12px; min-height: 100px; max-width: 400px; margin-left:auto; margin-right:auto; }
+  #challenge p { font-size: 1.2rem; user-select: text; }
+  label { font-weight: bold; }
 </style>
 </head>
 <body>
-
 <h1>Truth or Dare - Extremely Naughty Edition</h1>
 
-<!-- Login system -->
+<!-- Login -->
 <div id="loginSection">
-  <input type="text" id="usernameInput" placeholder="Enter username" aria-label="Username" />
-  <select id="genderSelect" aria-label="Gender">
+  <input type="text" id="usernameInput" placeholder="Enter username" />
+  <select id="genderSelect">
     <option value="">Select Gender</option>
     <option value="male">Male</option>
     <option value="female">Female</option>
@@ -75,26 +29,21 @@
   <button id="loginBtn">Login</button>
 </div>
 
+<!-- Game -->
 <div id="gameSection" style="display:none;">
-  <div id="roomInfo" aria-live="polite"></div>
-  <div id="player-list" aria-live="polite" aria-atomic="true">Players: None</div>
-
-  <div id="mode-select">
+  <div id="player-list">Players: None</div>
+  <div>
     <label for="mode">Choose game mode:</label>
-    <select id="mode" aria-label="Game mode">
+    <select id="mode">
       <option value="spicy" selected>Extremely Naughty</option>
       <option value="fun">Fun</option>
     </select>
   </div>
-
   <div>
     <button id="truthBtn" disabled>Truth</button>
     <button id="dareBtn" disabled>Dare</button>
   </div>
-
-  <div id="challenge" role="region" aria-live="polite" aria-atomic="true">
-    <p>Add players to start the game!</p>
-  </div>
+  <div id="challenge"><p>Add players to start the game!</p></div>
 </div>
 
 <!-- Firebase -->
@@ -102,240 +51,118 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyDNSy0zdokELU4CxSoy7zJXHAuBPQqLaO0",
-    authDomain: "truthor-dare-multiplayer.firebaseapp.com",
-    databaseURL: "https://truthor-dare-multiplayer-default-rtdb.firebaseio.com",
-    projectId: "truthor-dare-multiplayer",
-    storageBucket: "truthor-dare-multiplayer.firebasestorage.app",
-    messagingSenderId: "51895740835",
-    appId: "1:51895740835:web:783c3755a60ca0ad831216",
-    measurementId: "G-V857KJ9N6L"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyDNSy0zdokELU4CxSoy7zJXHAuBPQqLaO0",
+  authDomain: "truthor-dare-multiplayer.firebaseapp.com",
+  databaseURL: "https://truthor-dare-multiplayer-default-rtdb.firebaseio.com",
+  projectId: "truthor-dare-multiplayer",
+  storageBucket: "truthor-dare-multiplayer.firebasestorage.app",
+  messagingSenderId: "51895740835",
+  appId: "1:51895740835:web:783c3755a60ca0ad831216",
+  measurementId: "G-V857KJ9N6L"
+};
+firebase.initializeApp(firebaseConfig);
+const rdb = firebase.database();
 
-  firebase.initializeApp(firebaseConfig);
-  const rdb = firebase.database();
+let username = "";
+let gender = "";
+let players = [];
+let mode = "spicy";
+const gameId = "main-room";
 
-  let username = "";
-  let gender = "";
-  let gameId = "main-room"; // Single shared room
-  let players = [];
-  let mode = "spicy";
+const loginBtn = document.getElementById("loginBtn");
+const usernameInput = document.getElementById("usernameInput");
+const genderSelect = document.getElementById("genderSelect");
+const loginSection = document.getElementById("loginSection");
+const gameSection = document.getElementById("gameSection");
+const playerListDiv = document.getElementById("player-list");
+const modeSelect = document.getElementById("mode");
+const truthBtn = document.getElementById("truthBtn");
+const dareBtn = document.getElementById("dareBtn");
+const challengeDiv = document.getElementById("challenge");
 
-  const loginBtn = document.getElementById("loginBtn");
-  const usernameInput = document.getElementById("usernameInput");
-  const genderSelect = document.getElementById("genderSelect");
-  const loginSection = document.getElementById("loginSection");
-  const gameSection = document.getElementById("gameSection");
-  const roomInfo = document.getElementById("roomInfo");
-  const modeSelect = document.getElementById("mode");
-  const truthBtn = document.getElementById("truthBtn");
-  const dareBtn = document.getElementById("dareBtn");
-  const challengeDiv = document.getElementById("challenge");
+loginBtn.addEventListener("click", () => {
+  username = usernameInput.value.trim();
+  gender = genderSelect.value;
+  if (!username || !gender) { alert("Enter username & gender"); return; }
 
-  // Start listening for players immediately
+  const playerRef = rdb.ref(`games/${gameId}/players/${username}`);
+  playerRef.set({ name: username, gender: gender });
+  playerRef.onDisconnect().remove(); // auto remove on close
+
+  loginSection.style.display = "none";
+  gameSection.style.display = "block";
+
   listenForPlayers();
+  listenForChallenges();
+  listenForMode();
+});
 
-  loginBtn.addEventListener("click", () => {
-    const name = usernameInput.value.trim();
-    const selectedGender = genderSelect.value;
-
-    if (!name) {
-      alert("Please enter a username.");
-      return;
-    }
-    if (!selectedGender) {
-      alert("Please select your gender.");
-      return;
-    }
-    if (players.length >= 2) {
-      alert("Room is full. Only 2 players allowed.");
-      return;
-    }
-
-    username = name;
-    gender = selectedGender;
-
-    addPlayerToRoom(username, gender);
-    loginSection.style.display = "none";
-    gameSection.style.display = "block";
-
-    listenForChallenges();
-    listenForMode();
+function listenForPlayers() {
+  rdb.ref(`games/${gameId}/players`).on("value", snap => {
+    players = Object.values(snap.val() || {});
+    playerListDiv.textContent = players.length
+      ? "Players: " + players.map(p => p.name).join(", ")
+      : "Players: None";
+    truthBtn.disabled = dareBtn.disabled = (players.length !== 2);
   });
+}
 
-  function addPlayerToRoom(name, gender) {
-    const playerRef = rdb.ref(`games/${gameId}/players/${name}`);
-    playerRef.set({ name, gender });
-  }
-
-  function listenForPlayers() {
-    rdb.ref(`games/${gameId}/players`).on("value", (snapshot) => {
-      const playersData = snapshot.val() || {};
-      players = Object.values(playersData);
-      updatePlayerList();
-      updateButtonsState();
-    });
-  }
-
-  function listenForChallenges() {
-    rdb.ref(`games/${gameId}/currentChallenge`).on("value", (snapshot) => {
-      const challenge = snapshot.val();
-      if (challenge) {
-        challengeDiv.innerHTML = `<p><strong>${challenge.player}</strong> chose <em>${challenge.type}</em>: ${challenge.text}</p>`;
-      }
-    });
-  }
-
-  function listenForMode() {
-    rdb.ref(`games/${gameId}/mode`).on("value", (snapshot) => {
-      const newMode = snapshot.val();
-      if (newMode) {
-        mode = newMode;
-        modeSelect.value = newMode;
-      }
-    });
-  }
-
-  function updatePlayerList() {
-    if (players.length === 0) {
-      document.getElementById("player-list").textContent = "Players: None";
-    } else {
-      document.getElementById("player-list").textContent = "Players: " + players.map(p => p.name).join(", ");
-    }
-  }
-
-  function updateButtonsState() {
-    truthBtn.disabled = players.length !== 2;
-    dareBtn.disabled = players.length !== 2;
-  }
-
-  truthBtn.addEventListener("click", () => pickChallenge("truth"));
-  dareBtn.addEventListener("click", () => pickChallenge("dare"));
-
-  modeSelect.addEventListener("change", () => {
-    mode = modeSelect.value;
-    rdb.ref(`games/${gameId}/mode`).set(mode);
+function listenForChallenges() {
+  rdb.ref(`games/${gameId}/currentChallenge`).on("value", snap => {
+    const c = snap.val();
+    if (c) challengeDiv.innerHTML = `<p><strong>${c.player}</strong> chose <em>${c.type}</em>: ${c.text}</p>`;
   });
+}
+function listenForMode() {
+  rdb.ref(`games/${gameId}/mode`).on("value", snap => {
+    const m = snap.val();
+    if (m) { mode = m; modeSelect.value = m; }
+  });
+}
 
-  function pickChallenge(type) {
-    const activePlayer = players[Math.floor(Math.random() * players.length)];
-    let challengeText = "";
+modeSelect.addEventListener("change", () => {
+  mode = modeSelect.value;
+  rdb.ref(`games/${gameId}/mode`).set(mode);
+});
 
-    if (mode === "spicy") {
-      challengeText = type === "truth" 
-        ? questionSets.spicy[activePlayer.gender].truths[Math.floor(Math.random() * questionSets.spicy[activePlayer.gender].truths.length)] 
-        : questionSets.spicy[activePlayer.gender].dares[Math.floor(Math.random() * questionSets.spicy[activePlayer.gender].dares.length)];
-    } else {
-      challengeText = type === "truth" 
-        ? questionSets.fun[activePlayer.gender].truths[Math.floor(Math.random() * questionSets.fun[activePlayer.gender].truths.length)] 
-        : questionSets.fun[activePlayer.gender].dares[Math.floor(Math.random() * questionSets.fun[activePlayer.gender].dares.length)];
-    }
+truthBtn.addEventListener("click", () => pickChallenge("truth"));
+dareBtn.addEventListener("click", () => pickChallenge("dare"));
 
-    const challengeObj = { player: activePlayer.name, type, text: challengeText };
-    rdb.ref(`games/${gameId}/currentChallenge`).set(challengeObj);
+function pickChallenge(type) {
+  const activePlayer = players[Math.floor(Math.random() * players.length)];
+  let challengeText = "";
+  if (mode === "spicy") {
+    challengeText = type === "truth"
+      ? questionSets.spicy[activePlayer.gender].truths[Math.floor(Math.random()*questionSets.spicy[activePlayer.gender].truths.length)]
+      : questionSets.spicy[activePlayer.gender].dares[Math.floor(Math.random()*questionSets.spicy[activePlayer.gender].dares.length)];
+  } else {
+    challengeText = type === "truth"
+      ? questionSets.fun[activePlayer.gender].truths[Math.floor(Math.random()*questionSets.fun[activePlayer.gender].truths.length)]
+      : questionSets.fun[activePlayer.gender].dares[Math.floor(Math.random()*questionSets.fun[activePlayer.gender].dares.length)];
   }
+  rdb.ref(`games/${gameId}/currentChallenge`).set({ player: activePlayer.name, type, text: challengeText });
+}
 
-  // =========================
-  // EXTREMELY NAUGHTY MODE
-  // =========================
-  const maleTruths = [];
-  const femaleTruths = [];
-  const maleDares = [
-    "Male. Act out your favorite intimate move on camera.",
-    "Male. Pretend you’re making out with me for 20 seconds on video.",
-    "Male. Say a seductive sentence and repeat it with increasing intensity.",
-    "Male. Send a 10-second video blowing a kiss to the camera.",
-    "Male. Make a video pretending to kiss me passionately and whisper something naughty after.",
-    "Male. Describe exactly how you’d touch me, including where and how.",
-    "Male. Send a slow video of you tracing your abs and chest with your fingertips, making it clear you’re thinking of me."
-  ];
-  const femaleDares = [
-    "Female. Moan softly into the mic like you’re thinking about me.",
-    "Female. Send a video playing with your belly button with only an underwear on.",
-    "Female. Bite your lip and hold eye contact with the camera for 10 seconds.",
-    "Female. Describe how you want me to kiss you, step by step.",
-    "Female. Send a flirty selfie with your hair tousled or messy.",
-    "Female. Describe what you’re wearing right now in a way that makes me blush.",
-    "Female. Describe your favorite spot on your body that you want me to kiss — in detail.",
-    "Female. Tell me who in your contact list you would most want us to have a threesome with."
-  ];
-  const bothNaughtyDares = [
-    "Both. Send me a teasing photo — just enough to make me want more.",
-    "Both. Whisper your dirtiest fantasy about me into the mic for 15 seconds.",
-    "Both. Act out the first time we had sex.",
-    "Both. Send a voice note saying my name in the sexiest way possible.",
-    "Both. Describe in detail the last time you thought about me naked.",
-    "Both. Make a 10-second video of you tracing your lips with your finger.",
-    "Both. Whisper a naughty secret about what you want to do to me.",
-    "Both. Record yourself breathing heavily and send the clip.",
-    "Both. Slowly say something we’ve never done but you want to try.",
-    "Both. Send a photo of your hand tracing your neck or collarbone.",
-    "Both. Take a video slowly taking off your shirt but stop before it’s fully off.",
-    "Both. Take a selfie wearing just your underwear or boxers.",
-    "Both. Describe the first thing you’d do if you could touch me right now — make it explicit.",
-    "Both. Send a picture of my favorite part on you.",
-    "Both. Spell out what you want to do to your partner using only emojis.",
-    "Both. Send a picture of something I'd be touching if you were here.",
-    "Both. Tell me your favorite position to imagine us in — describe it in detail.",
-    "Both. Whisper your dirtiest fantasy into the mic — no holding back.",
-    "Both. Show me the last X-rated clip you watched.",
-    "Both. Make a video slowly taking off your underwear, you can stop whenever you want.",
-    "Both. Send a photo in your favorite underwear.",
-    "Both. Fake an orgasm for 1 minute on video.",
-    "Both. Do whatever I ask for 1 minute.",
-    "Both. Snap a photo of a mystery part of your body and have me guess.",
-    "Both. Make your silliest face, send a picture"
-  ];
-  maleDares.push(...bothNaughtyDares);
-  femaleDares.push(...bothNaughtyDares);
+// ================= TRUTH & DARES =================
+const maleTruths = ["What's your wildest fantasy?"];
+const femaleTruths = ["Who would you kiss in this room?"];
+const maleDares = ["Male Dare Example"];
+const femaleDares = ["Female Dare Example"];
+maleDares.push("Both Dare Example");
+femaleDares.push("Both Dare Example");
+maleTruths.push("Both Truth Example");
+femaleTruths.push("Both Truth Example");
 
-  const bothNaughtyTruths = [
-    "Both. What's the most erotic dream you've had about me?",
-    "Both. What's the dirtiest thing you’ve ever done in public?",
-    "Both. Have you ever thought of someone else while with me? Describe.",
-    "Both. What’s the most taboo thing you secretly want to try?",
-    "Both. If we were alone for 24 hours, what would we do?",
-    "Both. What's your biggest turn-on about me?",
-    "Both. What's your favourite time of day to have sex with me?",
-    "Both. Have you ever watched me when I wasn’t looking? When?",
-    "Both. What’s the wildest fantasy you’ve never told me?",
-    "Both. If you could change one thing about our sex life, what would it be?",
-    "Both. Where’s the riskiest place you want to touch me?",
-    "Both. Have you ever faked pleasure with me?",
-    "Both. What’s your favorite sound I make during sex?",
-    "Both. What’s the sexiest memory you have of us?",
-    "Both. If you had to blindfold me, what’s the first thing you’d do?",
-    "Both. What part of my body do you crave most right now?",
-    "Both. Have you ever wanted to record us? Why/why not?",
-    "Both. If I was yours for a whole night with no limits, what would you do?",
-    "Both. What’s the kinkiest thing you want us to try?",
-    "Both. Have you ever touched yourself thinking of me?",
-    "Both. What’s the most inappropriate place you’ve gotten turned on?",
-    "Both. What’s something dirty you want to whisper in my ear right now?",
-    "Both. What’s your favourite position and why?",
-    "Both. How often do you think about me in a sexual way?",
-    "Both. What’s the wildest thing you’d let me do to you?"
-  ];
-  maleTruths.push(...bothNaughtyTruths);
-  femaleTruths.push(...bothNaughtyTruths);
+const funMaleTruths = ["Fun male truth 1"];
+const funFemaleTruths = ["Fun female truth 1"];
+const funMaleDares = ["Fun male dare 1"];
+const funFemaleDares = ["Fun female dare 1"];
 
-  // FUN MODE placeholders
-  const funMaleTruths = ["Placeholder fun male truth 1", "Placeholder fun male truth 2"];
-  const funFemaleTruths = ["Placeholder fun female truth 1", "Placeholder fun female truth 2"];
-  const funMaleDares = ["Placeholder fun male dare 1", "Placeholder fun male dare 2"];
-  const funFemaleDares = ["Placeholder fun female dare 1", "Placeholder fun female dare 2"];
-
-  const questionSets = {
-    spicy: {
-      male: { truths: maleTruths, dares: maleDares },
-      female: { truths: femaleTruths, dares: femaleDares }
-    },
-    fun: {
-      male: { truths: funMaleTruths, dares: funMaleDares },
-      female: { truths: funFemaleTruths, dares: funFemaleDares }
-    }
-  };
+const questionSets = {
+  spicy: { male: { truths: maleTruths, dares: maleDares }, female: { truths: femaleTruths, dares: femaleDares }},
+  fun: { male: { truths: funMaleTruths, dares: funMaleDares }, female: { truths: funFemaleTruths, dares: funFemaleDares }}
+};
 </script>
 </body>
 </html>
